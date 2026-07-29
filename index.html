@@ -14,7 +14,7 @@
     <title>Wheelie Slugger</title>
     <link rel="manifest" href="./manifest.json" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=16" />
+    <link rel="stylesheet" href="./styles.css?v=17" />
   </head>
   <body>
     <div id="app">
@@ -129,6 +129,10 @@
             <button id="garageButton" class="secondary-button" type="button">
               <span aria-hidden="true">⚙</span>
               Garage
+            </button>
+            <button id="leaderboardButton" class="secondary-button" type="button">
+              <span aria-hidden="true">🏆</span>
+              Leaderboards
             </button>
 
             <section
@@ -308,6 +312,31 @@
       </form>
     </dialog>
 
+    <dialog id="leaderboardDialog" class="leaderboard-dialog">
+      <div class="leaderboard-card">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">GLOBAL RANKINGS</p>
+            <h2>Leaderboards</h2>
+          </div>
+          <button id="closeLeaderboardButton" class="close-button" type="button" aria-label="Close leaderboards">×</button>
+        </div>
+        <p id="leaderboardStatus" class="leaderboard-status">Loading riders…</p>
+        <div class="leaderboard-grid">
+          <section>
+            <h3>⚾ Richest Riders</h3>
+            <p>Most spendable baseballs</p>
+            <ol id="moneyLeaderboard"></ol>
+          </section>
+          <section>
+            <h3>🔥 Longest Wheelies</h3>
+            <p>Best continuous wheelie</p>
+            <ol id="wheelieLeaderboard"></ol>
+          </section>
+        </div>
+      </div>
+    </dialog>
+
     <dialog id="settingsDialog" class="settings-dialog">
       <form method="dialog" class="settings-card">
         <div class="dialog-header">
@@ -406,7 +435,7 @@
       </form>
     </dialog>
 
-    <script src="./config.js?v=16"></script>
-    <script src="./game.js?v=16"></script>
+    <script src="./config.js?v=17"></script>
+    <script src="./game.js?v=17"></script>
   </body>
 </html>
