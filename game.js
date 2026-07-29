@@ -300,7 +300,7 @@
       skyBottom: "#e9fbff",
       grass: "#258959",
       fence: "#155f4a",
-      obstacles: ["cone"],
+      obstacles: ["cone", "mound"],
     },
     {
       name: "Night Game",
@@ -308,7 +308,7 @@
       skyBottom: "#d86558",
       grass: "#19704a",
       fence: "#104836",
-      obstacles: ["cone", "glove"],
+      obstacles: ["cone", "glove", "mound", "ramp"],
     },
     {
       name: "Championship",
@@ -316,7 +316,7 @@
       skyBottom: "#4e3670",
       grass: "#145c3f",
       fence: "#0c3f31",
-      obstacles: ["cone", "glove", "bats"],
+      obstacles: ["cone", "glove", "bats", "tire-stack", "ramp"],
     },
   ];
 
@@ -324,6 +324,15 @@
     cone: { label: "Cone", requiredAngle: 0.36, width: 38, height: 54, points: 90 },
     glove: { label: "Glove", requiredAngle: 0.54, width: 48, height: 46, points: 130 },
     bats: { label: "Bats", requiredAngle: 0.69, width: 60, height: 53, points: 180 },
+    mound: { label: "Pitcher's mound", requiredAngle: 0.31, width: 72, height: 30, points: 110 },
+    "tire-stack": {
+      label: "Tire stack",
+      requiredAngle: 0.78,
+      width: 72,
+      height: 65,
+      points: 240,
+    },
+    ramp: { label: "MTB hopper", requiredAngle: 0.2, width: 112, height: 58, points: 350 },
   };
 
   function readSave() {
@@ -523,6 +532,10 @@
       this.angularVelocity = 0;
       this.boostCharge = 100;
       this.boostTimer = 0;
+      this.airborne = false;
+      this.airHeight = 0;
+      this.airVelocity = 0;
+      this.activeJump = null;
       this.currentInning = 1;
       this.nextObstacle = 780;
       this.nextPickup = 470;
@@ -669,6 +682,29 @@
         this.angularVelocity = Math.max(0, this.angularVelocity);
       }
 
+      if (this.airborne) {
+        this.airHeight += this.airVelocity * dt;
+        this.airVelocity -= 610 * dt;
+        if (this.airHeight <= 0 && this.airVelocity < 0) {
+          this.airHeight = 0;
+          this.airVelocity = 0;
+          this.airborne = false;
+          const landedInWheelie = this.angle >= 0.38 && this.angle <= 1.08;
+          if (!landedInWheelie) {
+            this.crash("landing");
+            return;
+          }
+          if (this.activeJump) this.activeJump.cleared = true;
+          const jumpPoints = obstacleTypes.ramp.points * this.combo;
+          this.score += jumpPoints;
+          this.burst(this.playerX() + 25, this.groundY() - 10, "#c7ff45", 15, true);
+          sounds.clear("landing");
+          this.showToast(`WHEELIE LANDING! +${jumpPoints}`);
+          this.activeJump = null;
+          if (navigator.vibrate) navigator.vibrate(25);
+        }
+      }
+
       const inBalanceZone = this.angle >= 0.46 && this.angle <= 0.96;
       if (inBalanceZone) {
         this.balanceTime += dt;
@@ -770,6 +806,28 @@
         obstacle.checked = true;
         const data = obstacleTypes[obstacle.type];
 
+        if (obstacle.type === "ramp") {
+          if (this.airborne || this.speed < 115 || this.angle < data.requiredAngle) {
+            this.crash("ramp");
+            return;
+          }
+          this.airborne = true;
+          this.airHeight = 4;
+          this.airVelocity = 255 + Math.min(65, this.speed * 0.12);
+          this.activeJump = obstacle;
+          this.angularVelocity += 0.18;
+          sounds.boost();
+          this.showToast("AIR! LAND IN A WHEELIE");
+          this.announce("Jump! Use left and right to land in a wheelie.");
+          continue;
+        }
+
+        if (this.airborne) {
+          obstacle.cleared = true;
+          this.score += data.points * this.combo;
+          continue;
+        }
+
         if (this.angle < data.requiredAngle) {
           this.crash(obstacle.type);
           return;
@@ -818,6 +876,22 @@
         bats: {
           title: "Bats in the lane!",
           message: "That stack needs a big, controlled wheelie to clear it.",
+        },
+        mound: {
+          title: "Mound collision!",
+          message: "Pop the front wheel before reaching the pitcher's mound.",
+        },
+        "tire-stack": {
+          title: "Tires in the lane!",
+          message: "The tire stack needs your highest controlled wheelie.",
+        },
+        ramp: {
+          title: "Missed the hopper!",
+          message: "Build speed and lift the front wheel as you reach the MTB ramp.",
+        },
+        landing: {
+          title: "Hard landing!",
+          message: "Use left and right in the air, then land inside the green wheelie zone.",
         },
       };
 
@@ -1209,7 +1283,7 @@
         ctx.beginPath();
         ctx.arc(1, -19, 14, 0.1, Math.PI - 0.1);
         ctx.stroke();
-      } else {
+      } else if (type === "bats") {
         ctx.fillStyle = "rgba(0,0,0,.17)";
         ctx.beginPath();
         ctx.ellipse(0, 3, 34, 8, 0, 0, Math.PI * 2);
@@ -1225,6 +1299,70 @@
           ctx.fillRect(-6, -9, 12, 7);
           ctx.restore();
         });
+      } else if (type === "mound") {
+        ctx.fillStyle = "rgba(0,0,0,.16)";
+        ctx.beginPath();
+        ctx.ellipse(0, 3, 44, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#b97b44";
+        ctx.beginPath();
+        ctx.moveTo(-43, 0);
+        ctx.quadraticCurveTo(-26, -29, 0, -27);
+        ctx.quadraticCurveTo(28, -27, 43, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#f7f1df";
+        roundRect(ctx, -13, -31, 26, 6, 3);
+        ctx.fill();
+      } else if (type === "tire-stack") {
+        ctx.fillStyle = "rgba(0,0,0,.2)";
+        ctx.beginPath();
+        ctx.ellipse(0, 5, 45, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const tires = [
+          [-23, -17],
+          [23, -17],
+          [0, -48],
+        ];
+        for (const [tireX, tireY] of tires) {
+          ctx.fillStyle = "#0a1017";
+          ctx.beginPath();
+          ctx.arc(tireX, tireY, 23, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "#3b4a58";
+          ctx.lineWidth = 4;
+          ctx.stroke();
+          ctx.fillStyle = "#172532";
+          ctx.beginPath();
+          ctx.arc(tireX, tireY, 9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (type === "ramp") {
+        ctx.fillStyle = "rgba(0,0,0,.2)";
+        ctx.beginPath();
+        ctx.ellipse(3, 4, 67, 10, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const rampGradient = ctx.createLinearGradient(-58, 0, 50, -58);
+        rampGradient.addColorStop(0, "#875528");
+        rampGradient.addColorStop(1, "#d99a4b");
+        ctx.fillStyle = rampGradient;
+        ctx.beginPath();
+        ctx.moveTo(-59, 0);
+        ctx.lineTo(52, -58);
+        ctx.lineTo(58, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#f1c27d";
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.moveTo(-56, -3);
+        ctx.lineTo(53, -61);
+        ctx.stroke();
+        ctx.fillStyle = "#172532";
+        ctx.font = "900 10px system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("HOPPER", 12, -23);
+        ctx.textAlign = "start";
       }
 
       ctx.restore();
@@ -1242,7 +1380,7 @@
       const factoryBuild = bikeLevel >= 12;
       const wheelBase = factoryBuild ? 104 : 99;
       const wheelRadius = factoryBuild ? 26 : 24;
-      const y = this.groundY() - wheelRadius + 1;
+      const y = this.groundY() - wheelRadius + 1 - this.airHeight;
 
       ctx.save();
       ctx.translate(x, y);
