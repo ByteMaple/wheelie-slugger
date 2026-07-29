@@ -1,10 +1,10 @@
-const CACHE_NAME = "wheelie-slugger-v16";
+const CACHE_NAME = "wheelie-slugger-v17";
 const GAME_FILES = [
   "./",
   "./index.html",
-  "./styles.css?v=16",
-  "./config.js?v=16",
-  "./game.js?v=16",
+  "./styles.css?v=17",
+  "./config.js?v=17",
+  "./game.js?v=17",
   "./manifest.json",
   "./icon.svg",
 ];
