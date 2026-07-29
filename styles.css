@@ -679,6 +679,74 @@ h2 {
   border-top: 1px solid var(--line);
 }
 
+.daily-challenge {
+  margin-top: 13px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 191, 47, 0.36);
+  border-radius: 15px;
+  background: linear-gradient(135deg, rgba(255, 191, 47, 0.11), rgba(255, 122, 50, 0.05));
+}
+
+.daily-challenge__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.daily-challenge__top span,
+.daily-challenge > small {
+  display: block;
+  color: #d2a944;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.daily-challenge__top strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+}
+
+.daily-challenge__top b {
+  flex: none;
+  color: #ffd766;
+  font-size: 13px;
+}
+
+.daily-challenge p {
+  margin: 8px 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.daily-challenge__track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.daily-challenge__track i {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff9e2c, #ffe06b);
+  transition: width 240ms ease;
+}
+
+.daily-challenge > small {
+  margin-top: 6px;
+}
+
+.daily-challenge > small.is-complete {
+  color: var(--lime);
+}
+
 .menu-records div {
   display: flex;
   flex-direction: column;
