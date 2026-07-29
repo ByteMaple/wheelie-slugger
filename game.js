@@ -579,10 +579,18 @@
       }
 
       const distanceMeters = this.distanceMeters();
-      const topSpeed = 235 + Math.min(distanceMeters * 0.12, 105) + (this.currentInning - 1) * 16;
+      const bikeLevel = getBikeIndex(save.selectedBike);
+      const bikeSpeedBonus = bikeLevel * 5.5;
+      const bikeAcceleration = 2.35 + bikeLevel * 0.035;
+      const topSpeed =
+        225 +
+        bikeSpeedBonus +
+        Math.min(distanceMeters * 0.12, 105) +
+        (this.currentInning - 1) * 16;
       const boostSpeed = this.boostTimer > 0 && this.controls.forward ? 165 : 0;
       if (this.controls.forward) {
-        this.speed += (topSpeed + boostSpeed - this.speed) * Math.min(1, dt * 2.5);
+        this.speed +=
+          (topSpeed + boostSpeed - this.speed) * Math.min(1, dt * bikeAcceleration);
       } else {
         this.speed = Math.max(0, this.speed - 92 * dt);
       }
@@ -672,7 +680,9 @@
     }
 
     checkObjects() {
-      const checkX = this.camera + this.playerX() + 72;
+      const bikeLevel = getBikeIndex(save.selectedBike);
+      const frontWheelOffset = bikeLevel >= 12 ? 99 : 94;
+      const checkX = this.camera + this.playerX() + frontWheelOffset;
 
       for (const pickup of this.pickups) {
         if (pickup.checked || checkX < pickup.x) continue;
@@ -1167,54 +1177,105 @@
 
     drawBike() {
       const x = this.playerX();
-      const y = this.groundY() - 21;
       const isCrashed = this.state === "crashed";
       const displayAngle =
         this.state === "menu"
           ? 0.48 + Math.sin(this.demoTime * 1.5) * 0.08
           : this.angle + (isCrashed ? Math.min(0.5, (performance.now() - this.lastTime) * 0.0002) : 0);
       const bike = bikes.find((item) => item.id === save.selectedBike) || bikes[0];
+      const bikeLevel = getBikeIndex(bike.id);
+      const factoryBuild = bikeLevel >= 12;
+      const wheelBase = factoryBuild ? 104 : 99;
+      const wheelRadius = factoryBuild ? 26 : 24;
+      const y = this.groundY() - wheelRadius + 1;
 
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(-displayAngle);
 
       const wheelRotation = this.camera * 0.06;
-      this.drawWheel(0, 0, wheelRotation);
-      this.drawWheel(94, 0, wheelRotation);
+      this.drawWheel(0, 0, wheelRotation, wheelRadius, bike.accent);
+      this.drawWheel(wheelBase, 0, wheelRotation, wheelRadius, bike.accent);
 
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
-      ctx.strokeStyle = bike.color;
-      ctx.lineWidth = 7;
+      // Long swingarm and reinforced electric dirt-bike chassis.
+      ctx.strokeStyle = "#182330";
+      ctx.lineWidth = factoryBuild ? 9 : 8;
       ctx.beginPath();
-      ctx.moveTo(4, -3);
-      ctx.lineTo(39, -40);
-      ctx.lineTo(67, -4);
-      ctx.lineTo(4, -3);
-      ctx.lineTo(57, -5);
-      ctx.lineTo(75, -37);
-      ctx.lineTo(94, 0);
+      ctx.moveTo(3, -3);
+      ctx.lineTo(48, -25);
+      ctx.lineTo(68, -12);
       ctx.stroke();
 
-      ctx.fillStyle = "#182330";
-      roundRect(ctx, 38, -45, 28, 12, 6);
+      // Large battery and motor body.
+      ctx.fillStyle = bike.color;
+      ctx.beginPath();
+      ctx.moveTo(32, -52);
+      ctx.lineTo(67, -49);
+      ctx.lineTo(76, -31);
+      ctx.lineTo(63, -10);
+      ctx.lineTo(35, -18);
+      ctx.lineTo(25, -37);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#101b27";
+      ctx.beginPath();
+      ctx.arc(58, -14, factoryBuild ? 14 : 12, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = bike.accent;
-      roundRect(ctx, 44, -40, 22, 13, 4);
+      ctx.beginPath();
+      ctx.arc(58, -14, 6, 0, Math.PI * 2);
       ctx.fill();
+
+      // Inverted front fork and high motocross handlebar.
+      ctx.strokeStyle = bike.accent;
+      ctx.lineWidth = factoryBuild ? 7 : 6;
+      ctx.beginPath();
+      ctx.moveTo(73, -46);
+      ctx.lineTo(wheelBase - 2, -3);
+      ctx.stroke();
 
       ctx.strokeStyle = "#162432";
       ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(73, -38);
-      ctx.lineTo(82, -50);
-      ctx.lineTo(94, -49);
-      ctx.moveTo(38, -40);
-      ctx.lineTo(33, -52);
-      ctx.lineTo(24, -52);
+      ctx.moveTo(71, -45);
+      ctx.lineTo(82, -58);
+      ctx.lineTo(96, -58);
       ctx.stroke();
+
+      // Flat dirt-bike seat with rear and front fenders.
+      ctx.fillStyle = "#121c27";
+      roundRect(ctx, 27, -60, factoryBuild ? 50 : 45, 11, 5);
+      ctx.fill();
+      ctx.fillStyle = bike.color;
+      ctx.beginPath();
+      ctx.moveTo(29, -57);
+      ctx.lineTo(-8, -49);
+      ctx.lineTo(2, -42);
+      ctx.lineTo(38, -50);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(wheelBase - 17, -24);
+      ctx.quadraticCurveTo(wheelBase + 3, -34, wheelBase + 22, -25);
+      ctx.lineTo(wheelBase + 17, -18);
+      ctx.quadraticCurveTo(wheelBase, -25, wheelBase - 17, -17);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rear shock and battery detail.
+      ctx.strokeStyle = "#f8fafc";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(35, -48);
+      ctx.lineTo(53, -23);
+      ctx.stroke();
+      ctx.fillStyle = "rgba(8, 18, 30, .35)";
+      roundRect(ctx, 37, -44, 25, 19, 4);
+      ctx.fill();
 
       this.drawRider(bike);
 
@@ -1239,26 +1300,37 @@
       ctx.restore();
     }
 
-    drawWheel(x, y, rotation) {
+    drawWheel(x, y, rotation, radius = 24, accent = "#d8e5ec") {
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rotation);
+
+      // Knobby off-road tread.
+      ctx.fillStyle = "#080d12";
+      for (let knob = 0; knob < 12; knob += 1) {
+        ctx.save();
+        ctx.rotate((Math.PI * 2 * knob) / 12);
+        roundRect(ctx, radius - 2, -4, 8, 8, 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.fillStyle = "#0d141c";
       ctx.beginPath();
-      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = "#d8e5ec";
+      ctx.strokeStyle = accent;
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(0, 0, 16, 0, Math.PI * 2);
+      ctx.arc(0, 0, radius - 7, 0, Math.PI * 2);
       ctx.stroke();
       ctx.strokeStyle = "rgba(216,229,236,.65)";
       ctx.lineWidth = 1;
-      for (let spoke = 0; spoke < 8; spoke += 1) {
-        ctx.rotate(Math.PI / 4);
+      for (let spoke = 0; spoke < 10; spoke += 1) {
+        ctx.rotate(Math.PI / 5);
         ctx.beginPath();
         ctx.moveTo(0, 0);
-        ctx.lineTo(15, 0);
+        ctx.lineTo(radius - 8, 0);
         ctx.stroke();
       }
       ctx.fillStyle = "#8193a1";
@@ -1341,6 +1413,11 @@
     return Math.min(max, Math.max(min, value));
   }
 
+  function getBikeIndex(bikeId) {
+    const index = bikes.findIndex((bike) => bike.id === bikeId);
+    return index < 0 ? 0 : index;
+  }
+
   function formatNumber(value) {
     return new Intl.NumberFormat("en-US").format(value);
   }
@@ -1388,18 +1465,24 @@
 
   function renderGarage() {
     ui.bikeList.innerHTML = "";
-    for (const bike of bikes) {
+    for (const [bikeIndex, bike] of bikes.entries()) {
       const owned = save.ownedBikes.includes(bike.id);
       const canAfford = save.baseballBalance >= bike.cost;
       const selected = save.selectedBike === bike.id;
+      const speedRating = 100 + bikeIndex * 5;
       const card = document.createElement("article");
       card.className = `bike-card${selected ? " is-selected" : ""}`;
       card.innerHTML = `
         <div class="bike-swatch" style="color:${bike.color}; box-shadow:inset 0 -3px 0 ${bike.color}22">
-          ${bike.icon}
+          🏍️
         </div>
         <h3>${bike.name}</h3>
         <p>${bike.description}</p>
+        <div class="bike-performance" aria-label="Speed rating ${speedRating}">
+          <span>Speed</span>
+          <div><i style="width:${((bikeIndex + 1) / bikes.length) * 100}%"></i></div>
+          <strong>${speedRating}</strong>
+        </div>
         <button type="button" data-bike="${bike.id}" ${owned || canAfford ? "" : "disabled"}>
           ${
             selected
