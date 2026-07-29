@@ -2416,7 +2416,7 @@
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js?v=14").catch(() => {
+      navigator.serviceWorker.register("./sw.js?v=15").catch(() => {
         // Offline support is optional; the game still works without it.
       });
     });
