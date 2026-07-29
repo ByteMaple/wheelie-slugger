@@ -39,6 +39,17 @@
     garage: $("#garageDialog"),
     garageButton: $("#garageButton"),
     topGarageButton: $("#topGarageButton"),
+    settingsButton: $("#settingsButton"),
+    settingsDialog: $("#settingsDialog"),
+    autoForwardSetting: $("#autoForwardSetting"),
+    volumeSetting: $("#volumeSetting"),
+    volumeValue: $("#volumeValue"),
+    brightnessSetting: $("#brightnessSetting"),
+    brightnessValue: $("#brightnessValue"),
+    batterySaverSetting: $("#batterySaverSetting"),
+    vibrationSetting: $("#vibrationSetting"),
+    screenShakeSetting: $("#screenShakeSetting"),
+    fullscreenButton: $("#fullscreenButton"),
     resultGarageButton: $("#resultGarageButton"),
     bikeList: $("#bikeList"),
     menuBest: $("#menuBestScore"),
@@ -408,6 +419,12 @@
       ownedBikes: ["rookie"],
       selectedBike: "rookie",
       soundOn: false,
+      autoForward: true,
+      soundVolume: 0.7,
+      brightness: 1,
+      batterySaver: false,
+      vibrationOn: true,
+      screenShakeOn: true,
       username: null,
       playerId: null,
       playerToken: null,
@@ -421,6 +438,10 @@
       saved.baseballBalance = Number.isFinite(stored.baseballBalance)
         ? Math.max(0, stored.baseballBalance)
         : saved.totalBaseballs;
+      saved.soundVolume = Number.isFinite(Number(saved.soundVolume))
+        ? clamp(Number(saved.soundVolume), 0, 1)
+        : 0.7;
+      saved.brightness = clamp(Number(saved.brightness) || 1, 0.45, 1.25);
       saved.ownedBikes = Array.isArray(stored.ownedBikes)
         ? [...new Set(["rookie", ...stored.ownedBikes])]
         : ["rookie"];
@@ -462,6 +483,26 @@
     }
   }
 
+  function haptic(pattern) {
+    if (save.vibrationOn && navigator.vibrate) navigator.vibrate(pattern);
+  }
+
+  function shakeScreen(strength = "light") {
+    if (!save.screenShakeOn) return;
+    const app = $("#app");
+    app.classList.remove("screen-shake--light", "screen-shake--heavy");
+    void app.offsetWidth;
+    app.classList.add(`screen-shake--${strength}`);
+    window.setTimeout(
+      () => app.classList.remove("screen-shake--light", "screen-shake--heavy"),
+      strength === "heavy" ? 380 : 220,
+    );
+  }
+
+  function applyBrightness() {
+    document.documentElement.style.setProperty("--game-brightness", String(save.brightness));
+  }
+
   class SoundBoard {
     constructor() {
       this.enabled = Boolean(save.soundOn);
@@ -491,7 +532,7 @@
       if (endFrequency) {
         oscillator.frequency.exponentialRampToValueAtTime(endFrequency, now + duration);
       }
-      gain.gain.setValueAtTime(volume, now);
+      gain.gain.setValueAtTime(volume * save.soundVolume, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
       oscillator.connect(gain);
       gain.connect(audio.destination);
@@ -519,7 +560,7 @@
       filter.type = type;
       filter.frequency.setValueAtTime(frequency, now);
       filter.Q.setValueAtTime(type === "bandpass" ? 1.8 : 0.7, now);
-      gain.gain.setValueAtTime(volume, now);
+      gain.gain.setValueAtTime(volume * save.soundVolume, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
       source.connect(filter);
       filter.connect(gain);
@@ -548,6 +589,11 @@
 
     boost() {
       this.tone(125, 0.22, "sawtooth", 0.04, 420);
+    }
+
+    jump() {
+      this.tone(210, 0.12, "triangle", 0.05, 430);
+      this.noiseBurst(0.05, 0.06, 900, "bandpass");
     }
 
     crash() {
@@ -620,6 +666,7 @@
       this.airHeight = 0;
       this.airVelocity = 0;
       this.activeJump = null;
+      this.jumpSource = null;
       this.runTime = 0;
       this.perfectBoost = false;
       this.boostZonePrompted = false;
@@ -755,7 +802,6 @@
       if (pressed && this.state !== "running") return;
       this.controls[action] = pressed;
       const buttons = {
-        forward: ui.forwardButton,
         leanBack: ui.leanBackButton,
         leanForward: ui.leanForwardButton,
         wheelDown: ui.wheelDownButton,
@@ -791,7 +837,26 @@
       sounds.boost();
       this.burst(this.playerX() - 40, this.groundY() - 20, "#ffb33c", 13, true);
       if (!hitPerfectBoost) this.showToast("Power boost!");
-      if (navigator.vibrate) navigator.vibrate(20);
+      haptic(20);
+      shakeScreen("light");
+    }
+
+    jump() {
+      if (this.state !== "running" || this.airborne) return;
+      if (this.speed < 65) {
+        this.showToast("Lean or hold W to build speed!");
+        return;
+      }
+      this.airborne = true;
+      this.airHeight = 3;
+      this.airVelocity = 235 + Math.min(35, this.speed * 0.08);
+      this.activeJump = null;
+      this.jumpSource = "manual";
+      this.angularVelocity += 0.1;
+      sounds.jump();
+      haptic(16);
+      shakeScreen("light");
+      this.showToast("JUMP! LAND THE WHEELIE");
     }
 
     update(dt) {
@@ -818,8 +883,13 @@
         bikeSpeedBonus +
         Math.min(distanceMeters * 0.12, 105) +
         (this.currentInning - 1) * 16;
-      const boostSpeed = this.boostTimer > 0 && this.controls.forward ? 165 : 0;
-      if (this.controls.forward) {
+      const accelerating =
+        save.autoForward ||
+        this.controls.forward ||
+        this.controls.leanBack ||
+        this.controls.leanForward;
+      const boostSpeed = this.boostTimer > 0 && accelerating ? 165 : 0;
+      if (accelerating) {
         this.speed +=
           (topSpeed + boostSpeed - this.speed) * Math.min(1, dt * bikeAcceleration);
       } else {
@@ -858,14 +928,17 @@
             return;
           }
           if (this.activeJump) this.activeJump.cleared = true;
-          const jumpPoints = obstacleTypes.ramp.points * this.combo;
+          const jumpPoints =
+            (this.jumpSource === "ramp" ? obstacleTypes.ramp.points : 140) * this.combo;
           this.score += jumpPoints;
           this.burst(this.playerX() + 25, this.groundY() - 10, "#c7ff45", 15, true);
           sounds.clear("landing");
           this.showToast(`WHEELIE LANDING! +${jumpPoints}`);
-          advanceDailyChallenge("wheelie-landings");
+          if (this.jumpSource === "ramp") advanceDailyChallenge("wheelie-landings");
           this.activeJump = null;
-          if (navigator.vibrate) navigator.vibrate(25);
+          this.jumpSource = null;
+          haptic(25);
+          shakeScreen("light");
         }
       }
 
@@ -1031,6 +1104,7 @@
           this.airHeight = 4;
           this.airVelocity = 255 + Math.min(65, this.speed * 0.12);
           this.activeJump = obstacle;
+          this.jumpSource = "ramp";
           this.angularVelocity += 0.18;
           sounds.boost();
           this.showToast("AIR! LAND IN A WHEELIE");
@@ -1068,7 +1142,8 @@
       this.state = "crashed";
       this.releaseControls();
       sounds.crash();
-      if (navigator.vibrate) navigator.vibrate([45, 35, 90]);
+      haptic([45, 35, 90]);
+      shakeScreen("heavy");
       this.burst(this.playerX() + 40, this.groundY() - 28, "#ff7a32", 24, true);
 
       const finalScore = Math.floor(this.score);
@@ -2119,6 +2194,7 @@
 
   const game = new WheelieGame();
   let resumeAfterGarage = false;
+  let resumeAfterSettings = false;
 
   refreshPlayerIdentity();
   ui.usernameForm.addEventListener("submit", claimUsername);
@@ -2154,6 +2230,71 @@
   ui.pauseButton.addEventListener("click", () => game.pause());
   ui.soundButton.addEventListener("click", () => sounds.toggle());
 
+  function refreshSettings() {
+    ui.autoForwardSetting.checked = Boolean(save.autoForward);
+    ui.volumeSetting.value = String(Math.round(save.soundVolume * 100));
+    ui.volumeValue.textContent = `${ui.volumeSetting.value}%`;
+    ui.brightnessSetting.value = String(Math.round(save.brightness * 100));
+    ui.brightnessValue.textContent = `${ui.brightnessSetting.value}%`;
+    ui.batterySaverSetting.checked = Boolean(save.batterySaver);
+    ui.vibrationSetting.checked = Boolean(save.vibrationOn);
+    ui.screenShakeSetting.checked = Boolean(save.screenShakeOn);
+    ui.fullscreenButton.textContent = document.fullscreenElement
+      ? "Exit fullscreen"
+      : "Enter fullscreen";
+  }
+
+  function openSettings() {
+    resumeAfterSettings = game.state === "running";
+    if (resumeAfterSettings) game.pause();
+    refreshSettings();
+    ui.settingsDialog.showModal();
+  }
+
+  ui.settingsButton.addEventListener("click", openSettings);
+  ui.settingsDialog.addEventListener("close", () => {
+    if (resumeAfterSettings && game.state === "paused") game.resume();
+    resumeAfterSettings = false;
+  });
+  ui.autoForwardSetting.addEventListener("change", () => {
+    save.autoForward = ui.autoForwardSetting.checked;
+    writeSave();
+  });
+  ui.volumeSetting.addEventListener("input", () => {
+    save.soundVolume = Number(ui.volumeSetting.value) / 100;
+    ui.volumeValue.textContent = `${ui.volumeSetting.value}%`;
+    writeSave();
+  });
+  ui.brightnessSetting.addEventListener("input", () => {
+    save.brightness = Number(ui.brightnessSetting.value) / 100;
+    ui.brightnessValue.textContent = `${ui.brightnessSetting.value}%`;
+    applyBrightness();
+    writeSave();
+  });
+  ui.batterySaverSetting.addEventListener("change", () => {
+    save.batterySaver = ui.batterySaverSetting.checked;
+    writeSave();
+  });
+  ui.vibrationSetting.addEventListener("change", () => {
+    save.vibrationOn = ui.vibrationSetting.checked;
+    writeSave();
+    if (save.vibrationOn) haptic(30);
+  });
+  ui.screenShakeSetting.addEventListener("change", () => {
+    save.screenShakeOn = ui.screenShakeSetting.checked;
+    writeSave();
+    if (save.screenShakeOn) shakeScreen("light");
+  });
+  ui.fullscreenButton.addEventListener("click", async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
+      refreshSettings();
+    } catch {
+      game.showToast("Fullscreen is not supported here.");
+    }
+  });
+
   function openGarage() {
     resumeAfterGarage = game.state === "running";
     if (resumeAfterGarage) game.pause();
@@ -2188,7 +2329,6 @@
   });
 
   const controlButtons = {
-    forward: ui.forwardButton,
     leanBack: ui.leanBackButton,
     leanForward: ui.leanForwardButton,
     wheelDown: ui.wheelDownButton,
@@ -2209,6 +2349,11 @@
     button.addEventListener("lostpointercapture", () => game.setControl(action, false));
   }
 
+  ui.forwardButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    game.jump();
+  });
+
   ui.boostButton.addEventListener("pointerdown", (event) => {
     event.preventDefault();
     game.useBoost();
@@ -2216,7 +2361,6 @@
 
   const keyActions = {
     KeyW: "forward",
-    ArrowUp: "forward",
     KeyA: "leanBack",
     ArrowLeft: "leanBack",
     KeyD: "leanForward",
@@ -2226,6 +2370,10 @@
   };
 
   document.addEventListener("keydown", (event) => {
+    if (event.code === "Space" || event.code === "ArrowUp") {
+      event.preventDefault();
+      if (!event.repeat) game.jump();
+    }
     const action = keyActions[event.code];
     if (action) {
       event.preventDefault();
@@ -2258,11 +2406,12 @@
   });
 
   updateSoundButton();
+  applyBrightness();
   refreshRecords();
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js").catch(() => {
+      navigator.serviceWorker.register("./sw.js?v=11").catch(() => {
         // Offline support is optional; the game still works without it.
       });
     });
