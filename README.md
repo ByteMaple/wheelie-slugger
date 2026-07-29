@@ -17,8 +17,10 @@ A mobile-friendly browser game that combines e-bike wheelies with a baseball the
 
 On mobile, the four matching arrow controls appear at the bottom of the game screen.
 
-The game stores best scores, career baseballs, sound preferences, and unlocked bikes in the
-browser. It can also be installed to a phone's home screen from a supported mobile browser.
+Leaning has deliberate weight and momentum, so controlled wheelies require timing. Baseballs
+collected during rides become spendable in-game currency for purchasing 25 different bikes.
+The game stores scores, baseballs, purchased bikes, and sound preferences in the browser. It
+can also be installed to a phone's home screen from a supported mobile browser.
 
 ## Run locally
 
