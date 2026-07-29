@@ -2,6 +2,10 @@
 
 A mobile-friendly browser game that combines e-bike wheelies with a baseball theme.
 
+## Play online
+
+[Play Wheelie Slugger](https://bytemaple.github.io/wheelie-slugger/)
+
 ## Play
 
 - Hold **W** or **Up Arrow** to accelerate.
@@ -28,9 +32,8 @@ Then visit `http://localhost:8000`.
 
 ## Hosting
 
-The game is designed for GitHub Pages and includes a deployment workflow. In the repository,
-choose **Settings → Pages → Source → GitHub Actions** once. Future updates to `main` will
-publish automatically.
+The game is hosted with GitHub Pages and includes a deployment workflow. Future updates to
+`main` publish automatically.
 
 ## Expansion ideas
 
