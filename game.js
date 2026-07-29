@@ -54,6 +54,7 @@
     live: $("#liveRegion"),
     playerBadge: $("#playerBadge"),
     playerUsername: $("#playerUsername"),
+    ownerTag: $("#ownerTag"),
     usernameDialog: $("#usernameDialog"),
     usernameForm: $("#usernameForm"),
     usernameInput: $("#usernameInput"),
@@ -1480,9 +1481,12 @@
 
   function refreshPlayerIdentity() {
     const hasUsername = Boolean(save.username);
+    const isOwner = save.username?.toLowerCase() === "henry";
     ui.playerBadge.hidden = !hasUsername;
     ui.start.disabled = !hasUsername;
     ui.playerUsername.textContent = hasUsername ? save.username : "";
+    ui.ownerTag.hidden = !isOwner;
+    ui.playerBadge.classList.toggle("player-badge--owner", isOwner);
   }
 
   function openUsernameDialog() {
