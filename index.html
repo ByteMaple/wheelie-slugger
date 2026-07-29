@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Wheelie Slugger — ride an e-bike, hold the wheelie, and chase a baseball championship."
+    />
+    <meta name="theme-color" content="#07111f" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>Wheelie Slugger</title>
+    <link rel="manifest" href="./manifest.json" />
+    <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <a class="brand" href="#" aria-label="Wheelie Slugger home">
+          <span class="brand-mark" aria-hidden="true">⚾</span>
+          <span>
+            <strong>Wheelie Slugger</strong>
+            <small>E-bike baseball</small>
+          </span>
+        </a>
+
+        <div class="topbar-actions">
+          <button id="soundButton" class="icon-button" type="button" aria-label="Turn sound on">
+            <span aria-hidden="true">🔇</span>
+          </button>
+          <button id="pauseButton" class="icon-button" type="button" aria-label="Pause game" hidden>
+            <span aria-hidden="true">Ⅱ</span>
+          </button>
+        </div>
+      </header>
+
+      <main id="gameShell" class="game-shell">
+        <canvas id="gameCanvas" aria-label="Wheelie Slugger game area">
+          Your browser does not support the game canvas.
+        </canvas>
+
+        <section id="hud" class="hud" aria-label="Game score" hidden>
+          <div class="inning-pill">
+            <span>INNING</span>
+            <strong id="inningValue">1</strong>
+          </div>
+          <div class="hud-stat">
+            <span>Score</span>
+            <strong id="scoreValue">0</strong>
+          </div>
+          <div class="hud-stat">
+            <span>Baseballs</span>
+            <strong><span aria-hidden="true">⚾</span> <span id="baseballValue">0</span></strong>
+          </div>
+          <div class="hud-stat hud-stat--desktop">
+            <span>Distance</span>
+            <strong><span id="distanceValue">0</span> m</strong>
+          </div>
+        </section>
+
+        <section id="balancePanel" class="balance-panel" aria-label="Wheelie balance" hidden>
+          <div class="balance-copy">
+            <span>Balance</span>
+            <strong id="comboValue">×1</strong>
+          </div>
+          <div class="balance-track" aria-hidden="true">
+            <span class="balance-zone"></span>
+            <span id="balanceNeedle" class="balance-needle"></span>
+          </div>
+        </section>
+
+        <section id="boostPanel" class="boost-panel" aria-label="Boost charge" hidden>
+          <span>Boost</span>
+          <div class="boost-track" aria-hidden="true">
+            <span id="boostFill" class="boost-fill"></span>
+          </div>
+        </section>
+
+        <div id="inningBanner" class="inning-banner" aria-live="polite" hidden>
+          <span id="inningBannerEyebrow">NEXT UP</span>
+          <strong id="inningBannerTitle">INNING 2</strong>
+          <small id="inningBannerSubtitle">Night Game</small>
+        </div>
+
+        <section id="menuOverlay" class="overlay overlay--visible">
+          <div class="hero-card">
+            <div class="hero-art" aria-hidden="true">
+              <div class="hero-ball">⚾</div>
+              <div class="hero-bike">
+                <span class="wheel wheel--rear"></span>
+                <span class="wheel wheel--front"></span>
+                <span class="bike-frame"></span>
+                <span class="rider">9</span>
+              </div>
+            </div>
+
+            <p class="eyebrow">WELCOME TO THE BALLPARK</p>
+            <h1>Ride it.<br /><em>Hold it.</em> Go yard.</h1>
+            <p class="hero-description">
+              Pop a wheelie, clear the gear, and collect enough baseballs to become the
+              Wheelie Slugger.
+            </p>
+
+            <button id="startButton" class="primary-button" type="button">
+              <span>Play ball</span>
+              <span aria-hidden="true">→</span>
+            </button>
+
+            <button id="garageButton" class="secondary-button" type="button">
+              <span aria-hidden="true">⚙</span>
+              Garage
+            </button>
+
+            <div class="menu-records">
+              <div>
+                <span>Best score</span>
+                <strong id="menuBestScore">0</strong>
+              </div>
+              <div>
+                <span>Career baseballs</span>
+                <strong id="menuBaseballs">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="how-to-card">
+            <p class="eyebrow">HOW TO RIDE</p>
+            <div class="how-to-steps">
+              <div>
+                <span class="step-icon">↑</span>
+                <p><strong>Forward</strong> to accelerate</p>
+              </div>
+              <div>
+                <span class="step-icon">←</span>
+                <p><strong>Lean back</strong> to pop a wheelie</p>
+              </div>
+              <div>
+                <span class="step-icon">→</span>
+                <p><strong>Lean forward</strong> to balance</p>
+              </div>
+              <div>
+                <span class="step-icon">↓</span>
+                <p><strong>Wheel down</strong> to end the wheelie</p>
+              </div>
+            </div>
+            <p class="keyboard-help">
+              Keyboard: WASD or arrow keys &nbsp;·&nbsp; Boost with X or Shift
+            </p>
+          </div>
+        </section>
+
+        <section id="resultOverlay" class="overlay" hidden>
+          <div class="result-card">
+            <p class="eyebrow" id="resultEyebrow">THE PLAY IS OVER</p>
+            <h2 id="resultTitle">Bike down!</h2>
+            <p id="resultMessage">Keep the front wheel up to clear the cone.</p>
+
+            <div class="result-score">
+              <span>Final score</span>
+              <strong id="resultScore">0</strong>
+              <small id="newBestLabel" hidden>NEW PERSONAL BEST!</small>
+            </div>
+
+            <div class="result-grid">
+              <div>
+                <span>Distance</span>
+                <strong><span id="resultDistance">0</span> m</strong>
+              </div>
+              <div>
+                <span>Baseballs</span>
+                <strong>⚾ <span id="resultBaseballs">0</span></strong>
+              </div>
+              <div>
+                <span>Best combo</span>
+                <strong id="resultCombo">×1</strong>
+              </div>
+            </div>
+
+            <button id="restartButton" class="primary-button" type="button">
+              <span>Ride again</span>
+              <span aria-hidden="true">↻</span>
+            </button>
+            <button id="resultGarageButton" class="secondary-button" type="button">Open garage</button>
+            <button id="homeButton" class="text-button" type="button">Back to home</button>
+          </div>
+        </section>
+
+        <section id="pauseOverlay" class="overlay" hidden>
+          <div class="pause-card">
+            <p class="eyebrow">TIME OUT</p>
+            <h2>Game paused</h2>
+            <button id="resumeButton" class="primary-button" type="button">Resume ride</button>
+            <button id="pauseHomeButton" class="text-button" type="button">Quit to home</button>
+          </div>
+        </section>
+
+        <div id="gameControls" class="game-controls" hidden>
+          <button id="boostButton" class="control-button control-button--boost" type="button">
+            <span aria-hidden="true">⚡</span>
+            <strong>Boost</strong>
+            <span class="control-key">X</span>
+          </button>
+          <div class="d-pad" role="group" aria-label="Bike controls">
+            <button
+              id="forwardButton"
+              class="direction-button direction-button--up"
+              type="button"
+              aria-label="Accelerate forward"
+            >
+              <span aria-hidden="true">↑</span>
+              <small>W</small>
+            </button>
+            <button
+              id="leanBackButton"
+              class="direction-button direction-button--left"
+              type="button"
+              aria-label="Lean back and lift the front wheel"
+            >
+              <span aria-hidden="true">←</span>
+              <small>A</small>
+            </button>
+            <button
+              id="wheelDownButton"
+              class="direction-button direction-button--down"
+              type="button"
+              aria-label="Bring the front wheel down"
+            >
+              <span aria-hidden="true">↓</span>
+              <small>S</small>
+            </button>
+            <button
+              id="leanForwardButton"
+              class="direction-button direction-button--right"
+              type="button"
+              aria-label="Lean forward"
+            >
+              <span aria-hidden="true">→</span>
+              <small>D</small>
+            </button>
+          </div>
+        </div>
+
+        <div id="toast" class="toast" aria-live="polite" hidden></div>
+        <div id="liveRegion" class="sr-only" aria-live="polite"></div>
+      </main>
+    </div>
+
+    <dialog id="garageDialog" class="garage-dialog">
+      <form method="dialog" class="garage-card">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">YOUR COLLECTION</p>
+            <h2>Wheelie Garage</h2>
+          </div>
+          <button class="close-button" value="close" aria-label="Close garage">×</button>
+        </div>
+        <p class="garage-intro">
+          Catch baseballs during your rides to unlock new e-bikes. Your progress saves on this
+          device.
+        </p>
+        <div id="bikeList" class="bike-list"></div>
+        <div class="garage-total">
+          <span>Career baseballs</span>
+          <strong>⚾ <span id="garageBaseballs">0</span></strong>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./game.js"></script>
+  </body>
+</html>
