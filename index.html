@@ -28,6 +28,9 @@
         </a>
 
         <div class="topbar-actions">
+          <div id="playerBadge" class="player-badge" hidden>
+            <span aria-hidden="true">@</span><strong id="playerUsername"></strong>
+          </div>
           <button id="soundButton" class="icon-button" type="button" aria-label="Turn sound on">
             <span aria-hidden="true">🔇</span>
           </button>
@@ -269,6 +272,41 @@
       </form>
     </dialog>
 
+    <dialog id="usernameDialog" class="username-dialog">
+      <form id="usernameForm" class="username-card">
+        <div class="username-ball" aria-hidden="true">⚾</div>
+        <p class="eyebrow">WELCOME, ROOKIE</p>
+        <h2>Choose your player name</h2>
+        <p class="username-intro">
+          This name is yours across Wheelie Slugger, so pick a good one.
+        </p>
+        <label for="usernameInput">Player name</label>
+        <div class="username-field">
+          <span aria-hidden="true">@</span>
+          <input
+            id="usernameInput"
+            name="username"
+            type="text"
+            minlength="3"
+            maxlength="16"
+            pattern="[A-Za-z0-9_]+"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+            placeholder="WheelieAce"
+            required
+          />
+        </div>
+        <small>3–16 characters · letters, numbers, and underscores</small>
+        <p id="usernameStatus" class="username-status" role="status" aria-live="polite"></p>
+        <div id="usernameSuggestions" class="username-suggestions" hidden></div>
+        <button id="claimUsernameButton" class="primary-button" type="submit">
+          Claim player name
+        </button>
+      </form>
+    </dialog>
+
+    <script src="./config.js"></script>
     <script src="./game.js"></script>
   </body>
 </html>
