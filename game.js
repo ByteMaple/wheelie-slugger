@@ -901,13 +901,13 @@
       this.boostCharge = Math.min(100, this.boostCharge + dt * (this.boostTimer > 0 ? 3 : 9));
 
       let torque = -0.62 - this.angle * 0.25;
-      if (this.controls.leanBack) torque += 2.75;
-      if (this.controls.leanForward) torque -= 2.1;
-      if (this.controls.wheelDown) torque -= 3.8;
+      if (this.controls.leanBack) torque += 4.35;
+      if (this.controls.leanForward) torque -= 3.45;
+      if (this.controls.wheelDown) torque -= 4.8;
       const stabilityAssist = this.angle > 1.08 ? -0.58 : 0;
       this.angularVelocity += (torque + stabilityAssist) * dt;
-      this.angularVelocity *= Math.pow(0.2, dt);
-      this.angularVelocity = clamp(this.angularVelocity, -1.7, 1.65);
+      this.angularVelocity *= Math.pow(0.34, dt);
+      this.angularVelocity = clamp(this.angularVelocity, -2.65, 2.55);
       this.angle += this.angularVelocity * dt;
 
       if (this.angle <= 0) {
@@ -2416,7 +2416,7 @@
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js?v=13").catch(() => {
+      navigator.serviceWorker.register("./sw.js?v=14").catch(() => {
         // Offline support is optional; the game still works without it.
       });
     });
