@@ -666,6 +666,64 @@ h2 {
   background: rgba(255, 255, 255, 0.1);
 }
 
+.difficulty-picker {
+  margin: 0 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.difficulty-picker legend {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.difficulty-picker > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+
+.difficulty-picker button {
+  min-width: 0;
+  min-height: 62px;
+  padding: 8px 6px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ink);
+  text-align: left;
+}
+
+.difficulty-picker button:hover {
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.difficulty-picker button.is-selected {
+  border-color: var(--lime);
+  background: rgba(199, 255, 69, 0.13);
+  box-shadow: 0 0 0 1px rgba(199, 255, 69, 0.2);
+}
+
+.difficulty-picker strong,
+.difficulty-picker small {
+  display: block;
+}
+
+.difficulty-picker strong {
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.difficulty-picker small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.25;
+}
+
 .text-button {
   min-height: 38px;
   margin-top: 5px;
@@ -1715,6 +1773,14 @@ h2 {
     width: min(100%, 480px);
     margin: max(2vh, 6px) auto 12px;
     padding: 24px;
+  }
+
+  .difficulty-picker button {
+    min-height: 58px;
+  }
+
+  .difficulty-picker small {
+    font-size: 7px;
   }
 
   h1 {
