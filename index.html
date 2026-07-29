@@ -14,7 +14,7 @@
     <title>Wheelie Slugger</title>
     <link rel="manifest" href="./manifest.json" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=11" />
   </head>
   <body>
     <div id="app">
@@ -35,6 +35,9 @@
           <button id="topGarageButton" class="topbar-garage" type="button">
             <span aria-hidden="true">⚙</span>
             <strong>Garage</strong>
+          </button>
+          <button id="settingsButton" class="icon-button" type="button" aria-label="Open settings">
+            <span aria-hidden="true">☰</span>
           </button>
           <button id="soundButton" class="icon-button" type="button" aria-label="Turn sound on">
             <span aria-hidden="true">🔇</span>
@@ -167,7 +170,7 @@
             <div class="how-to-steps">
               <div>
                 <span class="step-icon">↑</span>
-                <p><strong>Forward</strong> to accelerate</p>
+                <p><strong>Jump</strong> over tags and obstacles</p>
               </div>
               <div>
                 <span class="step-icon">←</span>
@@ -183,7 +186,7 @@
               </div>
             </div>
             <p class="keyboard-help">
-              Keyboard: WASD or arrow keys &nbsp;·&nbsp; Boost with X or Shift
+              Keyboard: A/D or arrows to lean · Space to jump · X or Shift to boost
             </p>
           </div>
         </section>
@@ -244,10 +247,10 @@
               id="forwardButton"
               class="direction-button direction-button--up"
               type="button"
-              aria-label="Accelerate forward"
+              aria-label="Jump"
             >
               <span aria-hidden="true">↑</span>
-              <small>W</small>
+              <small>SPACE</small>
             </button>
             <button
               id="leanBackButton"
@@ -305,6 +308,70 @@
       </form>
     </dialog>
 
+    <dialog id="settingsDialog" class="settings-dialog">
+      <form method="dialog" class="settings-card">
+        <div class="dialog-header">
+          <div>
+            <p class="eyebrow">GAME OPTIONS</p>
+            <h2>Settings</h2>
+          </div>
+          <button class="close-button" value="close" aria-label="Close settings">×</button>
+        </div>
+
+        <label class="setting-row">
+          <span>
+            <strong>Auto forward</strong>
+            <small>Keep moving without holding W</small>
+          </span>
+          <input id="autoForwardSetting" type="checkbox" />
+        </label>
+
+        <label class="setting-volume">
+          <span>
+            <strong>Sound volume</strong>
+            <output id="volumeValue">70%</output>
+          </span>
+          <input id="volumeSetting" type="range" min="0" max="100" step="5" />
+        </label>
+
+        <label class="setting-volume">
+          <span>
+            <strong>Game brightness</strong>
+            <output id="brightnessValue">100%</output>
+          </span>
+          <input id="brightnessSetting" type="range" min="45" max="125" step="5" />
+        </label>
+
+        <label class="setting-row">
+          <span>
+            <strong>Battery saver</strong>
+            <small>Saves your preference; reduced graphics are coming later</small>
+          </span>
+          <input id="batterySaverSetting" type="checkbox" />
+        </label>
+
+        <label class="setting-row">
+          <span>
+            <strong>Phone vibration</strong>
+            <small>Uses vibration on supported mobile devices</small>
+          </span>
+          <input id="vibrationSetting" type="checkbox" />
+        </label>
+
+        <label class="setting-row">
+          <span>
+            <strong>Screen shake</strong>
+            <small>Shake the game on jumps, boosts, and crashes</small>
+          </span>
+          <input id="screenShakeSetting" type="checkbox" />
+        </label>
+
+        <button id="fullscreenButton" class="secondary-button" type="button">
+          Enter fullscreen
+        </button>
+      </form>
+    </dialog>
+
     <dialog id="usernameDialog" class="username-dialog">
       <form id="usernameForm" class="username-card">
         <div class="username-ball" aria-hidden="true">⚾</div>
@@ -339,7 +406,7 @@
       </form>
     </dialog>
 
-    <script src="./config.js"></script>
-    <script src="./game.js"></script>
+    <script src="./config.js?v=11"></script>
+    <script src="./game.js?v=11"></script>
   </body>
 </html>
