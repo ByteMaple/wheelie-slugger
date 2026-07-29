@@ -84,6 +84,204 @@
       accent: "#4f2600",
       icon: "🚲",
     },
+    {
+      id: "pinstripe",
+      name: "Pinstripe Pro",
+      description: "Classic ballpark style with a clean white frame.",
+      cost: 110,
+      color: "#f4f7fb",
+      accent: "#152a4a",
+      icon: "🚲",
+    },
+    {
+      id: "night-game",
+      name: "Night Game Neon",
+      description: "A bright electric ride made for late innings.",
+      cost: 175,
+      color: "#a855f7",
+      accent: "#c7ff45",
+      icon: "🚲",
+    },
+    {
+      id: "hall-of-fame",
+      name: "Hall of Fame Chrome",
+      description: "The rarest bike in the garage. Built for legends.",
+      cost: 300,
+      color: "#a9bdc9",
+      accent: "#ff7a32",
+      icon: "🚲",
+    },
+    {
+      id: "bullpen-black",
+      name: "Bullpen Black",
+      description: "A stealthy ride that stays ready for the call.",
+      cost: 400,
+      color: "#1f2937",
+      accent: "#f8fafc",
+      icon: "🚲",
+    },
+    {
+      id: "curveball-green",
+      name: "Curveball Green",
+      description: "A sharp green frame with wicked break.",
+      cost: 525,
+      color: "#22c55e",
+      accent: "#052e16",
+      icon: "🚲",
+    },
+    {
+      id: "fastball-flame",
+      name: "Fastball Flame",
+      description: "Bright, fast, and impossible to ignore.",
+      cost: 675,
+      color: "#ef4444",
+      accent: "#fbbf24",
+      icon: "🚲",
+    },
+    {
+      id: "catchers-copper",
+      name: "Catcher's Copper",
+      description: "Tough gear-inspired color built for every inning.",
+      cost: 850,
+      color: "#b87333",
+      accent: "#172554",
+      icon: "🚲",
+    },
+    {
+      id: "steal-home-silver",
+      name: "Steal Home Silver",
+      description: "A quick silver bike made for fearless runs.",
+      cost: 1050,
+      color: "#cbd5e1",
+      accent: "#2563eb",
+      icon: "🚲",
+    },
+    {
+      id: "moonshot-purple",
+      name: "Moonshot Purple",
+      description: "Launch wheelies under a deep purple sky.",
+      cost: 1300,
+      color: "#7c3aed",
+      accent: "#f5d0fe",
+      icon: "🚲",
+    },
+    {
+      id: "walk-off-white",
+      name: "Walk-Off White",
+      description: "Clean, confident, and made for the final play.",
+      cost: 1600,
+      color: "#f8fafc",
+      accent: "#dc2626",
+      icon: "🚲",
+    },
+    {
+      id: "extra-innings-teal",
+      name: "Extra Innings Teal",
+      description: "Keeps its cool when the game goes long.",
+      cost: 1950,
+      color: "#14b8a6",
+      accent: "#082f49",
+      icon: "🚲",
+    },
+    {
+      id: "all-star-crimson",
+      name: "All-Star Crimson",
+      description: "A bold red ride reserved for standout players.",
+      cost: 2350,
+      color: "#be123c",
+      accent: "#fde68a",
+      icon: "🚲",
+    },
+    {
+      id: "pennant-pink",
+      name: "Pennant Pink",
+      description: "A bright victory color for the pennant chase.",
+      cost: 2800,
+      color: "#ec4899",
+      accent: "#fdf2f8",
+      icon: "🚲",
+    },
+    {
+      id: "diamond-ice",
+      name: "Diamond Ice",
+      description: "Cold blue shine with championship confidence.",
+      cost: 3350,
+      color: "#67e8f9",
+      accent: "#164e63",
+      icon: "🚲",
+    },
+    {
+      id: "warning-track",
+      name: "Warning Track Orange",
+      description: "A fiery orange frame that rides to the wall.",
+      cost: 4000,
+      color: "#f97316",
+      accent: "#431407",
+      icon: "🚲",
+    },
+    {
+      id: "green-monster",
+      name: "Green Monster",
+      description: "Big-wall energy in an unmistakable deep green.",
+      cost: 4750,
+      color: "#15803d",
+      accent: "#fef3c7",
+      icon: "🚲",
+    },
+    {
+      id: "southpaw-sapphire",
+      name: "Southpaw Sapphire",
+      description: "A rare blue gem with a different angle.",
+      cost: 5600,
+      color: "#1d4ed8",
+      accent: "#bfdbfe",
+      icon: "🚲",
+    },
+    {
+      id: "switch-hitter-lime",
+      name: "Switch Hitter Lime",
+      description: "Bright lime style that looks good from either side.",
+      cost: 6600,
+      color: "#84cc16",
+      accent: "#1a2e05",
+      icon: "🚲",
+    },
+    {
+      id: "perfect-game-pearl",
+      name: "Perfect Game Pearl",
+      description: "Smooth pearl paint for a flawless performance.",
+      cost: 7750,
+      color: "#f5f3ff",
+      accent: "#6d28d9",
+      icon: "🚲",
+    },
+    {
+      id: "triple-crown-ruby",
+      name: "Triple Crown Ruby",
+      description: "A deep red collector bike with three-star status.",
+      cost: 9000,
+      color: "#9f1239",
+      accent: "#fbbf24",
+      icon: "🚲",
+    },
+    {
+      id: "world-series-carbon",
+      name: "World Series Carbon",
+      description: "Dark carbon styling for championship riders.",
+      cost: 10500,
+      color: "#111827",
+      accent: "#d1d5db",
+      icon: "🚲",
+    },
+    {
+      id: "cooperstown-platinum",
+      name: "Cooperstown Platinum",
+      description: "The ultimate garage prize for a true wheelie legend.",
+      cost: 12500,
+      color: "#e2e8f0",
+      accent: "#c7ff45",
+      icon: "🚲",
+    },
   ];
 
   const innings = [
@@ -123,13 +321,30 @@
     const fallback = {
       bestScore: 0,
       totalBaseballs: 0,
+      baseballBalance: 0,
+      ownedBikes: ["rookie"],
       selectedBike: "rookie",
       soundOn: false,
     };
 
     try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-      return { ...fallback, ...saved };
+      const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+      const saved = { ...fallback, ...stored };
+      saved.totalBaseballs = Math.max(0, Number(saved.totalBaseballs) || 0);
+      saved.baseballBalance = Number.isFinite(stored.baseballBalance)
+        ? Math.max(0, stored.baseballBalance)
+        : saved.totalBaseballs;
+      saved.ownedBikes = Array.isArray(stored.ownedBikes)
+        ? [...new Set(["rookie", ...stored.ownedBikes])]
+        : ["rookie"];
+
+      // Preserve a bike that a returning player had selected before purchases were introduced.
+      if (stored.selectedBike && stored.selectedBike !== "rookie") {
+        saved.ownedBikes.push(stored.selectedBike);
+        saved.ownedBikes = [...new Set(saved.ownedBikes)];
+      }
+      if (!saved.ownedBikes.includes(saved.selectedBike)) saved.selectedBike = "rookie";
+      return saved;
     } catch {
       return fallback;
     }
@@ -376,14 +591,14 @@
       if (this.boostTimer > 0) this.boostTimer -= dt;
       this.boostCharge = Math.min(100, this.boostCharge + dt * (this.boostTimer > 0 ? 3 : 9));
 
-      let torque = -0.48 - this.angle * 0.2;
-      if (this.controls.leanBack) torque += 3.42;
-      if (this.controls.leanForward) torque -= 2.48;
-      if (this.controls.wheelDown) torque -= 4.6;
+      let torque = -0.62 - this.angle * 0.25;
+      if (this.controls.leanBack) torque += 2.15;
+      if (this.controls.leanForward) torque -= 1.55;
+      if (this.controls.wheelDown) torque -= 3.8;
       const stabilityAssist = this.angle > 1.08 ? -0.58 : 0;
       this.angularVelocity += (torque + stabilityAssist) * dt;
-      this.angularVelocity *= Math.pow(0.22, dt);
-      this.angularVelocity = clamp(this.angularVelocity, -2.15, 2.05);
+      this.angularVelocity *= Math.pow(0.12, dt);
+      this.angularVelocity = clamp(this.angularVelocity, -1.45, 1.3);
       this.angle += this.angularVelocity * dt;
 
       if (this.angle <= 0) {
@@ -466,6 +681,7 @@
           pickup.collected = true;
           this.baseballs += 1;
           save.totalBaseballs += 1;
+          save.baseballBalance += 1;
           writeSave();
           this.score += 120 * this.combo;
           sounds.collect();
@@ -1166,14 +1382,15 @@
   function refreshRecords() {
     ui.menuBest.textContent = formatNumber(save.bestScore);
     ui.menuBaseballs.textContent = formatNumber(save.totalBaseballs);
-    ui.garageBaseballs.textContent = formatNumber(save.totalBaseballs);
+    ui.garageBaseballs.textContent = formatNumber(save.baseballBalance);
     renderGarage();
   }
 
   function renderGarage() {
     ui.bikeList.innerHTML = "";
     for (const bike of bikes) {
-      const unlocked = save.totalBaseballs >= bike.cost;
+      const owned = save.ownedBikes.includes(bike.id);
+      const canAfford = save.baseballBalance >= bike.cost;
       const selected = save.selectedBike === bike.id;
       const card = document.createElement("article");
       card.className = `bike-card${selected ? " is-selected" : ""}`;
@@ -1183,8 +1400,16 @@
         </div>
         <h3>${bike.name}</h3>
         <p>${bike.description}</p>
-        <button type="button" data-bike="${bike.id}" ${unlocked ? "" : "disabled"}>
-          ${selected ? "Selected" : unlocked ? "Choose bike" : `🔒 ${bike.cost} balls`}
+        <button type="button" data-bike="${bike.id}" ${owned || canAfford ? "" : "disabled"}>
+          ${
+            selected
+              ? "Selected"
+              : owned
+                ? "Choose bike"
+                : canAfford
+                  ? `Buy · ⚾ ${bike.cost}`
+                  : `Need ⚾ ${bike.cost}`
+          }
         </button>
       `;
       ui.bikeList.appendChild(card);
@@ -1211,9 +1436,20 @@
   ui.bikeList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-bike]");
     if (!button || button.disabled) return;
-    save.selectedBike = button.dataset.bike;
+    const bike = bikes.find((item) => item.id === button.dataset.bike);
+    if (!bike) return;
+
+    const owned = save.ownedBikes.includes(bike.id);
+    if (!owned) {
+      if (save.baseballBalance < bike.cost) return;
+      save.baseballBalance -= bike.cost;
+      save.ownedBikes.push(bike.id);
+      game.announce(`${bike.name} purchased for ${bike.cost} baseballs.`);
+    }
+
+    save.selectedBike = bike.id;
     writeSave();
-    renderGarage();
+    refreshRecords();
   });
 
   const controlButtons = {
