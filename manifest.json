@@ -1,0 +1,19 @@
+{
+  "name": "Wheelie Slugger",
+  "short_name": "Wheelie",
+  "description": "Hold the wheelie, clear baseball obstacles, and chase a championship.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07111f",
+  "theme_color": "#07111f",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
