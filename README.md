@@ -19,6 +19,9 @@ On mobile, the four matching arrow controls appear at the bottom of the game scr
 
 Leaning has deliberate weight and momentum, so controlled wheelies require timing. Baseballs
 collected during rides become spendable in-game currency for purchasing 25 different bikes.
+Each more expensive bike has a higher top speed and quicker acceleration. The bikes use an
+electric dirt-bike design with off-road tires, battery bodies, long suspension, and motocross
+bodywork.
 The game stores scores, baseballs, purchased bikes, and sound preferences in the browser. It
 can also be installed to a phone's home screen from a supported mobile browser.
 
