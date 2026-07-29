@@ -25,6 +25,10 @@ bodywork.
 The game stores scores, baseballs, purchased bikes, and sound preferences in the browser. It
 can also be installed to a phone's home screen from a supported mobile browser.
 
+On first launch, every player claims a 3–16 character username. Usernames are checked
+case-insensitively against the shared Supabase database, so no two players can claim the same
+name.
+
 ## Run locally
 
 No build step or dependencies are required. Start any static web server in this folder:
