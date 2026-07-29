@@ -997,10 +997,42 @@ h2 {
 
 .bike-card p {
   min-height: 34px;
-  margin: 4px 0 12px;
+  margin: 4px 0 9px;
   color: var(--muted);
   font-size: 10px;
   line-height: 1.35;
+}
+
+.bike-performance {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 7px;
+  align-items: center;
+  margin-bottom: 11px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.bike-performance > div {
+  height: 5px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.bike-performance i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), var(--lime));
+}
+
+.bike-performance strong {
+  color: var(--ink);
+  font-size: 9px;
 }
 
 .bike-card button {
@@ -1243,13 +1275,13 @@ h2 {
   .bike-card {
     display: grid;
     grid-template-columns: 70px 1fr 85px;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto auto auto;
     gap: 2px 12px;
     align-items: center;
   }
 
   .bike-swatch {
-    grid-row: 1 / span 2;
+    grid-row: 1 / span 3;
     width: 70px;
     height: 62px;
     margin: 0;
@@ -1261,9 +1293,14 @@ h2 {
     margin: 2px 0 0;
   }
 
+  .bike-performance {
+    grid-column: 2;
+    margin: 5px 0 0;
+  }
+
   .bike-card button {
     grid-column: 3;
-    grid-row: 1 / span 2;
+    grid-row: 1 / span 3;
   }
 }
 
