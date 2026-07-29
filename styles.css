@@ -685,6 +685,16 @@ h2 {
   border: 1px solid rgba(255, 191, 47, 0.36);
   border-radius: 15px;
   background: linear-gradient(135deg, rgba(255, 191, 47, 0.11), rgba(255, 122, 50, 0.05));
+  cursor: pointer;
+  transition: border-color 160ms ease, transform 160ms ease, background 160ms ease;
+}
+
+.daily-challenge:hover,
+.daily-challenge:focus-visible {
+  border-color: #ffd766;
+  background: linear-gradient(135deg, rgba(255, 191, 47, 0.18), rgba(255, 122, 50, 0.08));
+  outline: 0;
+  transform: translateY(-1px);
 }
 
 .daily-challenge__top {
@@ -745,6 +755,79 @@ h2 {
 
 .daily-challenge > small.is-complete {
   color: var(--lime);
+}
+
+.daily-challenge__action {
+  display: block;
+  margin-top: 8px;
+  color: #ffe083;
+  font-size: 10px;
+  font-weight: 1000;
+  letter-spacing: 0.09em;
+  text-align: right;
+}
+
+.daily-challenge.is-complete {
+  cursor: default;
+  opacity: 0.78;
+}
+
+.challenge-timer {
+  position: absolute;
+  z-index: 8;
+  top: 74px;
+  right: 18px;
+  display: grid;
+  width: min(250px, 31vw);
+  padding: 11px 14px;
+  border: 2px solid #ffd766;
+  border-radius: 15px;
+  background: rgba(7, 17, 31, 0.9);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28), 0 0 18px rgba(255, 191, 47, 0.15);
+  pointer-events: none;
+}
+
+.challenge-timer[hidden] {
+  display: none;
+}
+
+.challenge-timer > span {
+  color: #ffd766;
+  font-size: 9px;
+  font-weight: 1000;
+  letter-spacing: 0.12em;
+}
+
+.challenge-timer > strong {
+  font-size: 30px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.challenge-timer > small {
+  margin-top: 5px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.challenge-timer.is-urgent {
+  border-color: var(--red);
+  animation: timer-pulse 650ms ease-in-out infinite alternate;
+}
+
+.challenge-timer.is-urgent > strong {
+  color: #ff7f8b;
+}
+
+@keyframes timer-pulse {
+  to {
+    transform: scale(1.035);
+    box-shadow: 0 0 24px rgba(255, 79, 94, 0.4);
+  }
 }
 
 .menu-records div {
@@ -1702,6 +1785,21 @@ h2 {
   }
 
   .topbar-garage span {
+    display: none;
+  }
+
+  .challenge-timer {
+    top: 116px;
+    right: 10px;
+    width: 145px;
+    padding: 8px 10px;
+  }
+
+  .challenge-timer > strong {
+    font-size: 25px;
+  }
+
+  .challenge-timer > small {
     display: none;
   }
 }
