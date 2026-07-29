@@ -2217,12 +2217,18 @@
 
   function refreshPlayerIdentity() {
     const hasUsername = Boolean(save.username);
-    const isOwner = ["henry", "henry7412"].includes(save.username?.toLowerCase());
+    const normalizedUsername = save.username?.toLowerCase();
+    const isOwner = ["henry", "henry7412"].includes(normalizedUsername);
+    const isAdmin = normalizedUsername === "hellopeople";
+    const hasStaffTag = isOwner || isAdmin;
     ui.playerBadge.hidden = !hasUsername;
     ui.start.disabled = !hasUsername;
     ui.playerUsername.textContent = hasUsername ? save.username : "";
-    ui.ownerTag.hidden = !isOwner;
-    ui.playerBadge.classList.toggle("player-badge--owner", isOwner);
+    ui.ownerTag.hidden = !hasStaffTag;
+    ui.ownerTag.textContent = isAdmin ? "ADMIN" : "OWNER";
+    ui.ownerTag.classList.toggle("owner-tag--admin", isAdmin);
+    ui.playerBadge.classList.toggle("player-badge--owner", hasStaffTag);
+    ui.playerBadge.classList.toggle("player-badge--admin", isAdmin);
   }
 
   function openUsernameDialog() {
