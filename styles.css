@@ -180,6 +180,27 @@ a:focus-visible {
   cursor: pointer;
 }
 
+.topbar-garage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 0 13px;
+  border: 1px solid rgba(199, 255, 69, 0.3);
+  border-radius: 12px;
+  background: rgba(199, 255, 69, 0.08);
+  color: var(--lime);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.topbar-garage:hover {
+  background: rgba(199, 255, 69, 0.15);
+}
+
 .icon-button:hover,
 .close-button:hover {
   background: rgba(255, 255, 255, 0.11);
@@ -1576,6 +1597,44 @@ h2 {
 
   .result-grid {
     margin-bottom: 9px;
+  }
+}
+
+@media (max-width: 560px) {
+  .topbar {
+    padding-inline: max(9px, env(safe-area-inset-left));
+  }
+
+  .topbar-actions {
+    gap: 5px;
+  }
+
+  .player-badge {
+    max-width: 25vw;
+    padding-inline: 8px;
+  }
+
+  .player-badge--owner {
+    width: auto;
+    padding: 4px;
+  }
+
+  .player-badge--owner > span:first-child,
+  .player-badge--owner > strong {
+    display: none;
+  }
+
+  .player-badge--owner .owner-tag {
+    margin-left: 0;
+    font-size: 11px;
+  }
+
+  .topbar-garage {
+    padding-inline: 10px;
+  }
+
+  .topbar-garage span {
+    display: none;
   }
 }
 
