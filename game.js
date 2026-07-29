@@ -1244,7 +1244,14 @@
         }
 
         if (obstacle.type === "ramp") {
-          if (this.airborne || this.speed < 115 || this.angle < data.requiredAngle) {
+          if (this.airborne) {
+            obstacle.cleared = true;
+            this.score += data.points * this.combo;
+            sounds.clear("ramp");
+            this.showToast(`RAMP JUMP! +${data.points * this.combo}`);
+            continue;
+          }
+          if (this.speed < 115 || this.angle < data.requiredAngle) {
             this.crash("ramp");
             return;
           }
@@ -1261,9 +1268,8 @@
         }
 
         const mustJump =
-          save.difficulty === "hard" ||
-          (save.difficulty === "normal" &&
-            (obstacle.type === "tire-stack" || obstacle.type === "bats"));
+          (save.difficulty === "hard" || save.difficulty === "normal") &&
+          (obstacle.type === "tire-stack" || obstacle.type === "bats");
         if (mustJump && !this.airborne) {
           this.crash(obstacle.type);
           return;
