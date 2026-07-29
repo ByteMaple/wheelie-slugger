@@ -2286,13 +2286,18 @@
     if (save.screenShakeOn) shakeScreen("light");
   });
   ui.fullscreenButton.addEventListener("click", async () => {
+    const shouldEnterFullscreen = !document.fullscreenElement;
+    if (ui.settingsDialog.open) ui.settingsDialog.close();
     try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await document.documentElement.requestFullscreen();
-      refreshSettings();
+      if (shouldEnterFullscreen) await document.documentElement.requestFullscreen();
+      else await document.exitFullscreen();
     } catch {
       game.showToast("Fullscreen is not supported here.");
     }
+  });
+  document.addEventListener("fullscreenchange", () => {
+    if (ui.settingsDialog.open) ui.settingsDialog.close();
+    refreshSettings();
   });
 
   function openGarage() {
@@ -2411,7 +2416,7 @@
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js?v=12").catch(() => {
+      navigator.serviceWorker.register("./sw.js?v=13").catch(() => {
         // Offline support is optional; the game still works without it.
       });
     });
