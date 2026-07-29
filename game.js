@@ -51,6 +51,12 @@
     screenShakeSetting: $("#screenShakeSetting"),
     fullscreenButton: $("#fullscreenButton"),
     resultGarageButton: $("#resultGarageButton"),
+    leaderboardButton: $("#leaderboardButton"),
+    leaderboardDialog: $("#leaderboardDialog"),
+    closeLeaderboardButton: $("#closeLeaderboardButton"),
+    leaderboardStatus: $("#leaderboardStatus"),
+    moneyLeaderboard: $("#moneyLeaderboard"),
+    wheelieLeaderboard: $("#wheelieLeaderboard"),
     bikeList: $("#bikeList"),
     menuBest: $("#menuBestScore"),
     menuBaseballs: $("#menuBaseballs"),
@@ -425,6 +431,7 @@
       batterySaver: false,
       vibrationOn: true,
       screenShakeOn: true,
+      longestWheelie: 0,
       username: null,
       playerId: null,
       playerToken: null,
@@ -442,6 +449,7 @@
         ? clamp(Number(saved.soundVolume), 0, 1)
         : 0.7;
       saved.brightness = clamp(Number(saved.brightness) || 1, 0.45, 1.25);
+      saved.longestWheelie = Math.max(0, Number(saved.longestWheelie) || 0);
       saved.ownedBikes = Array.isArray(stored.ownedBikes)
         ? [...new Set(["rookie", ...stored.ownedBikes])]
         : ["rookie"];
@@ -501,6 +509,87 @@
 
   function applyBrightness() {
     document.documentElement.style.setProperty("--game-brightness", String(save.brightness));
+  }
+
+  async function callGameRpc(functionName, body = {}) {
+    const config = window.WHEELIE_CONFIG;
+    if (!config?.supabaseUrl || !config?.supabasePublishableKey) {
+      throw new Error("Online service is not configured.");
+    }
+    const response = await fetch(`${config.supabaseUrl}/rest/v1/rpc/${functionName}`, {
+      method: "POST",
+      headers: {
+        apikey: config.supabasePublishableKey,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+    const result = await response.json().catch(() => null);
+    if (!response.ok) throw new Error(result?.message || `Request failed (${response.status})`);
+    return result;
+  }
+
+  async function submitPlayerStats() {
+    if (!save.playerId || !save.playerToken) return;
+    try {
+      await callGameRpc("submit_player_stats", {
+        requested_player_id: save.playerId,
+        requested_player_token: save.playerToken,
+        requested_money: Math.floor(save.baseballBalance),
+        requested_longest_wheelie: Number(save.longestWheelie.toFixed(2)),
+      });
+    } catch (error) {
+      console.info("Leaderboard submission is not available yet:", error.message);
+    }
+  }
+
+  function formatWheelieTime(value) {
+    return `${Number(value || 0).toFixed(1)}s`;
+  }
+
+  function renderLeaderboardList(element, entries, formatter) {
+    element.innerHTML = "";
+    for (const [index, entry] of entries.entries()) {
+      const row = document.createElement("li");
+      const isCurrentPlayer = entry.username?.toLowerCase() === save.username?.toLowerCase();
+      if (isCurrentPlayer) row.classList.add("is-current-player");
+      const rank = document.createElement("b");
+      rank.textContent = String(index + 1);
+      const name = document.createElement("span");
+      name.textContent = `@${entry.username}`;
+      const value = document.createElement("strong");
+      value.textContent = formatter(entry.value);
+      row.append(rank, name, value);
+      element.appendChild(row);
+    }
+  }
+
+  async function openLeaderboards() {
+    ui.leaderboardStatus.hidden = false;
+    ui.leaderboardStatus.textContent = "Loading global rankings…";
+    ui.moneyLeaderboard.innerHTML = "";
+    ui.wheelieLeaderboard.innerHTML = "";
+    ui.leaderboardDialog.showModal();
+    await submitPlayerStats();
+    try {
+      const result = await callGameRpc("get_leaderboards");
+      renderLeaderboardList(
+        ui.moneyLeaderboard,
+        Array.isArray(result?.money) ? result.money : [],
+        (value) => `⚾ ${formatNumber(Number(value) || 0)}`,
+      );
+      renderLeaderboardList(
+        ui.wheelieLeaderboard,
+        Array.isArray(result?.wheelies) ? result.wheelies : [],
+        formatWheelieTime,
+      );
+      ui.leaderboardStatus.hidden = false;
+      ui.leaderboardStatus.textContent = `${formatNumber(Number(result?.playerCount) || 0)} registered riders`;
+    } catch {
+      ui.leaderboardStatus.textContent =
+        "Leaderboards need the Supabase leaderboard setup before rankings can load.";
+    }
   }
 
   class SoundBoard {
@@ -658,6 +747,8 @@
       this.combo = 1;
       this.bestCombo = 1;
       this.balanceTime = 0;
+      this.wheelieStreak = 0;
+      this.longestWheelieThisRun = 0;
       this.angle = 0.08;
       this.angularVelocity = 0;
       this.boostCharge = 100;
@@ -783,6 +874,7 @@
     }
 
     home() {
+      this.saveRunStats();
       this.state = "menu";
       this.releaseControls();
       setOverlay(ui.pause, false);
@@ -795,6 +887,12 @@
       ui.controls.hidden = true;
       ui.pauseButton.hidden = true;
       refreshRecords();
+    }
+
+    saveRunStats() {
+      save.longestWheelie = Math.max(save.longestWheelie, this.longestWheelieThisRun || 0);
+      writeSave();
+      void submitPlayerStats();
     }
 
     setControl(action, pressed) {
@@ -943,6 +1041,13 @@
       }
 
       const inBalanceZone = this.angle >= 0.46 && this.angle <= 0.96;
+      const holdingWheelie = this.angle >= 0.38 && this.angle <= 1.15 && this.speed > 45;
+      if (holdingWheelie) {
+        this.wheelieStreak += dt;
+        this.longestWheelieThisRun = Math.max(this.longestWheelieThisRun, this.wheelieStreak);
+      } else {
+        this.wheelieStreak = 0;
+      }
       if (inBalanceZone) {
         this.balanceTime += dt;
         this.combo = clamp(1 + Math.floor(this.balanceTime / 1.25), 1, 5);
@@ -1149,7 +1254,9 @@
       const finalScore = Math.floor(this.score);
       const isNewBest = finalScore > save.bestScore;
       if (isNewBest) save.bestScore = finalScore;
+      save.longestWheelie = Math.max(save.longestWheelie, this.longestWheelieThisRun || 0);
       writeSave();
+      void submitPlayerStats();
 
       const messages = {
         loopout: {
@@ -2032,6 +2139,7 @@
     save.totalBaseballs += challenge.reward;
     writeSave();
     refreshRecords();
+    void submitPlayerStats();
     game.challengeMode = false;
     ui.challengeTimer.hidden = true;
     sounds.inning();
@@ -2041,7 +2149,7 @@
 
   function refreshPlayerIdentity() {
     const hasUsername = Boolean(save.username);
-    const isOwner = save.username?.toLowerCase() === "henry";
+    const isOwner = ["henry", "henry7412"].includes(save.username?.toLowerCase());
     ui.playerBadge.hidden = !hasUsername;
     ui.start.disabled = !hasUsername;
     ui.playerUsername.textContent = hasUsername ? save.username : "";
@@ -2142,6 +2250,7 @@
       save.playerToken = result.playerToken;
       writeSave();
       refreshPlayerIdentity();
+      void submitPlayerStats();
       ui.usernameStatus.textContent = `@${save.username} is yours!`;
       ui.usernameStatus.dataset.state = "success";
       window.setTimeout(() => ui.usernameDialog.close(), 450);
@@ -2229,6 +2338,8 @@
   ui.pauseHome.addEventListener("click", () => game.home());
   ui.pauseButton.addEventListener("click", () => game.pause());
   ui.soundButton.addEventListener("click", () => sounds.toggle());
+  ui.leaderboardButton.addEventListener("click", openLeaderboards);
+  ui.closeLeaderboardButton.addEventListener("click", () => ui.leaderboardDialog.close());
 
   function refreshSettings() {
     ui.autoForwardSetting.checked = Boolean(save.autoForward);
@@ -2330,6 +2441,7 @@
 
     save.selectedBike = bike.id;
     writeSave();
+    void submitPlayerStats();
     refreshRecords();
   });
 
@@ -2375,6 +2487,12 @@
   };
 
   document.addEventListener("keydown", (event) => {
+    if (
+      event.target instanceof HTMLElement &&
+      (event.target.matches("input, textarea, select") || event.target.isContentEditable)
+    ) {
+      return;
+    }
     if (event.code === "Space" || event.code === "ArrowUp") {
       event.preventDefault();
       if (!event.repeat) game.jump();
@@ -2395,6 +2513,12 @@
   });
 
   document.addEventListener("keyup", (event) => {
+    if (
+      event.target instanceof HTMLElement &&
+      (event.target.matches("input, textarea, select") || event.target.isContentEditable)
+    ) {
+      return;
+    }
     const action = keyActions[event.code];
     if (action) {
       event.preventDefault();
@@ -2416,7 +2540,7 @@
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./sw.js?v=16").catch(() => {
+      navigator.serviceWorker.register("./sw.js?v=17").catch(() => {
         // Offline support is optional; the game still works without it.
       });
     });
