@@ -39,6 +39,9 @@ can also be installed to a phone's home screen from a supported mobile browser.
 Settings include auto-forward, sound volume, in-game brightness, phone vibration on supported
 devices, visual screen shake, fullscreen, and a saved Battery Saver preference.
 
+Global leaderboards rank registered players by spendable baseball money and longest continuous
+wheelie. Run `leaderboard-setup.sql` once in Supabase before opening the leaderboard.
+
 On first launch, every player claims a 3–16 character username. Usernames are checked
 case-insensitively against the shared Supabase database, so no two players can claim the same
 name.
