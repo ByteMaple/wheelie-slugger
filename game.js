@@ -2219,7 +2219,7 @@
     const hasUsername = Boolean(save.username);
     const normalizedUsername = save.username?.toLowerCase();
     const isOwner = ["henry", "henry7412"].includes(normalizedUsername);
-    const isAdmin = normalizedUsername === "hellopeople";
+    const isAdmin = normalizedUsername === "hellopeople2924";
     const hasStaffTag = isOwner || isAdmin;
     ui.playerBadge.hidden = !hasUsername;
     ui.start.disabled = !hasUsername;
