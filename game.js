@@ -34,6 +34,7 @@
     boostButton: $("#boostButton"),
     garage: $("#garageDialog"),
     garageButton: $("#garageButton"),
+    topGarageButton: $("#topGarageButton"),
     resultGarageButton: $("#resultGarageButton"),
     bikeList: $("#bikeList"),
     menuBest: $("#menuBestScore"),
@@ -1810,6 +1811,7 @@
   }
 
   const game = new WheelieGame();
+  let resumeAfterGarage = false;
 
   refreshPlayerIdentity();
   ui.usernameForm.addEventListener("submit", claimUsername);
@@ -1827,12 +1829,19 @@
   ui.soundButton.addEventListener("click", () => sounds.toggle());
 
   function openGarage() {
+    resumeAfterGarage = game.state === "running";
+    if (resumeAfterGarage) game.pause();
     refreshRecords();
     ui.garage.showModal();
   }
 
   ui.garageButton.addEventListener("click", openGarage);
+  ui.topGarageButton.addEventListener("click", openGarage);
   ui.resultGarageButton.addEventListener("click", openGarage);
+  ui.garage.addEventListener("close", () => {
+    if (resumeAfterGarage && game.state === "paused") game.resume();
+    resumeAfterGarage = false;
+  });
   ui.bikeList.addEventListener("click", (event) => {
     const button = event.target.closest("[data-bike]");
     if (!button || button.disabled) return;
