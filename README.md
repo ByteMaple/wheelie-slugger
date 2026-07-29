@@ -8,7 +8,9 @@ A mobile-friendly browser game that combines e-bike wheelies with a baseball the
 
 ## Play
 
-- Hold **W** or **Up Arrow** to accelerate.
+- The bike auto-forwards by default, and leaning also keeps it moving.
+- Press **Space** or **Up Arrow** to jump.
+- Hold **W** to accelerate manually when auto-forward is turned off.
 - Hold **A** or **Left Arrow** to lean back and lift the front wheel.
 - Hold **D** or **Right Arrow** to lean forward and balance.
 - Hold **S** or **Down Arrow** to bring the front wheel down.
@@ -17,6 +19,7 @@ A mobile-friendly browser game that combines e-bike wheelies with a baseball the
 - Launch from MTB hoppers, adjust the bike in the air, and land inside the wheelie balance zone.
 
 On mobile, the four matching arrow controls appear at the bottom of the game screen.
+The on-screen up arrow is the jump button.
 
 Leaning has deliberate weight and momentum, so controlled wheelies require timing. Baseballs
 collected during rides become spendable in-game currency for purchasing 25 different bikes.
@@ -32,6 +35,9 @@ tags, and baseball-catching streaks. Select the challenge card to launch a dedic
 with an on-screen countdown timer. Completing one awards spendable baseballs for new bikes.
 The game stores scores, baseballs, purchased bikes, and sound preferences in the browser. It
 can also be installed to a phone's home screen from a supported mobile browser.
+
+Settings include auto-forward, sound volume, in-game brightness, phone vibration on supported
+devices, visual screen shake, fullscreen, and a saved Battery Saver preference.
 
 On first launch, every player claims a 3–16 character username. Usernames are checked
 case-insensitively against the shared Supabase database, so no two players can claim the same
