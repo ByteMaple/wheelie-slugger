@@ -1,0 +1,1299 @@
+(() => {
+  "use strict";
+
+  const $ = (selector) => document.querySelector(selector);
+  const canvas = $("#gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  const ui = {
+    hud: $("#hud"),
+    score: $("#scoreValue"),
+    baseballs: $("#baseballValue"),
+    distance: $("#distanceValue"),
+    inning: $("#inningValue"),
+    balancePanel: $("#balancePanel"),
+    balanceNeedle: $("#balanceNeedle"),
+    combo: $("#comboValue"),
+    boostPanel: $("#boostPanel"),
+    boostFill: $("#boostFill"),
+    menu: $("#menuOverlay"),
+    result: $("#resultOverlay"),
+    pause: $("#pauseOverlay"),
+    controls: $("#gameControls"),
+    start: $("#startButton"),
+    restart: $("#restartButton"),
+    resume: $("#resumeButton"),
+    home: $("#homeButton"),
+    pauseHome: $("#pauseHomeButton"),
+    pauseButton: $("#pauseButton"),
+    soundButton: $("#soundButton"),
+    forwardButton: $("#forwardButton"),
+    leanBackButton: $("#leanBackButton"),
+    leanForwardButton: $("#leanForwardButton"),
+    wheelDownButton: $("#wheelDownButton"),
+    boostButton: $("#boostButton"),
+    garage: $("#garageDialog"),
+    garageButton: $("#garageButton"),
+    resultGarageButton: $("#resultGarageButton"),
+    bikeList: $("#bikeList"),
+    menuBest: $("#menuBestScore"),
+    menuBaseballs: $("#menuBaseballs"),
+    garageBaseballs: $("#garageBaseballs"),
+    resultScore: $("#resultScore"),
+    resultDistance: $("#resultDistance"),
+    resultBaseballs: $("#resultBaseballs"),
+    resultCombo: $("#resultCombo"),
+    resultTitle: $("#resultTitle"),
+    resultMessage: $("#resultMessage"),
+    newBest: $("#newBestLabel"),
+    banner: $("#inningBanner"),
+    bannerEyebrow: $("#inningBannerEyebrow"),
+    bannerTitle: $("#inningBannerTitle"),
+    bannerSubtitle: $("#inningBannerSubtitle"),
+    toast: $("#toast"),
+    live: $("#liveRegion"),
+  };
+
+  const STORAGE_KEY = "wheelie-slugger-save-v1";
+
+  const bikes = [
+    {
+      id: "rookie",
+      name: "Rookie Red",
+      description: "A quick starter built for opening day.",
+      cost: 0,
+      color: "#ff4f5e",
+      accent: "#f7fbff",
+      icon: "🚲",
+    },
+    {
+      id: "dugout",
+      name: "Dugout Blue",
+      description: "Cool under pressure with extra boost style.",
+      cost: 20,
+      color: "#37b7ff",
+      accent: "#c7ff45",
+      icon: "🚲",
+    },
+    {
+      id: "grand-slam",
+      name: "Grand Slam Gold",
+      description: "The championship ride for elite sluggers.",
+      cost: 60,
+      color: "#ffbf2f",
+      accent: "#4f2600",
+      icon: "🚲",
+    },
+  ];
+
+  const innings = [
+    {
+      name: "Spring Training",
+      skyTop: "#70cbea",
+      skyBottom: "#e9fbff",
+      grass: "#258959",
+      fence: "#155f4a",
+      obstacles: ["cone"],
+    },
+    {
+      name: "Night Game",
+      skyTop: "#172c58",
+      skyBottom: "#d86558",
+      grass: "#19704a",
+      fence: "#104836",
+      obstacles: ["cone", "glove"],
+    },
+    {
+      name: "Championship",
+      skyTop: "#07152d",
+      skyBottom: "#4e3670",
+      grass: "#145c3f",
+      fence: "#0c3f31",
+      obstacles: ["cone", "glove", "bats"],
+    },
+  ];
+
+  const obstacleTypes = {
+    cone: { label: "Cone", requiredAngle: 0.36, width: 38, height: 54, points: 90 },
+    glove: { label: "Glove", requiredAngle: 0.54, width: 48, height: 46, points: 130 },
+    bats: { label: "Bats", requiredAngle: 0.69, width: 60, height: 53, points: 180 },
+  };
+
+  function readSave() {
+    const fallback = {
+      bestScore: 0,
+      totalBaseballs: 0,
+      selectedBike: "rookie",
+      soundOn: false,
+    };
+
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+      return { ...fallback, ...saved };
+    } catch {
+      return fallback;
+    }
+  }
+
+  const save = readSave();
+
+  function writeSave() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(save));
+    } catch {
+      // The game remains playable if storage is unavailable.
+    }
+  }
+
+  class SoundBoard {
+    constructor() {
+      this.enabled = Boolean(save.soundOn);
+      this.context = null;
+    }
+
+    ensureContext() {
+      if (!this.enabled) return null;
+      if (!this.context) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) this.context = new AudioContextClass();
+      }
+      if (this.context?.state === "suspended") this.context.resume();
+      return this.context;
+    }
+
+    tone(frequency, duration = 0.08, type = "sine", volume = 0.045, endFrequency = null) {
+      const audio = this.ensureContext();
+      if (!audio) return;
+
+      const oscillator = audio.createOscillator();
+      const gain = audio.createGain();
+      const now = audio.currentTime;
+
+      oscillator.type = type;
+      oscillator.frequency.setValueAtTime(frequency, now);
+      if (endFrequency) {
+        oscillator.frequency.exponentialRampToValueAtTime(endFrequency, now + duration);
+      }
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      oscillator.connect(gain);
+      gain.connect(audio.destination);
+      oscillator.start(now);
+      oscillator.stop(now + duration);
+    }
+
+    collect() {
+      this.tone(620, 0.08, "sine", 0.05, 880);
+    }
+
+    clear() {
+      this.tone(240, 0.1, "square", 0.025, 410);
+    }
+
+    boost() {
+      this.tone(125, 0.22, "sawtooth", 0.04, 420);
+    }
+
+    crash() {
+      this.tone(150, 0.34, "sawtooth", 0.05, 55);
+    }
+
+    inning() {
+      this.tone(440, 0.1, "triangle", 0.045, 550);
+      window.setTimeout(() => this.tone(660, 0.16, "triangle", 0.045, 880), 110);
+    }
+
+    toggle() {
+      this.enabled = !this.enabled;
+      save.soundOn = this.enabled;
+      writeSave();
+      if (this.enabled) this.tone(520, 0.1, "sine", 0.04, 720);
+      updateSoundButton();
+    }
+  }
+
+  const sounds = new SoundBoard();
+
+  class WheelieGame {
+    constructor() {
+      this.width = 0;
+      this.height = 0;
+      this.dpr = 1;
+      this.state = "menu";
+      this.lastTime = performance.now();
+      this.demoTime = 0;
+      this.controls = {
+        forward: false,
+        leanBack: false,
+        leanForward: false,
+        wheelDown: false,
+      };
+      this.toastTimer = null;
+      this.bannerTimer = null;
+      this.resize();
+      this.reset();
+      requestAnimationFrame((time) => this.frame(time));
+    }
+
+    resize() {
+      const rect = canvas.getBoundingClientRect();
+      this.width = Math.max(320, rect.width);
+      this.height = Math.max(280, rect.height);
+      this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+      canvas.width = Math.round(this.width * this.dpr);
+      canvas.height = Math.round(this.height * this.dpr);
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    }
+
+    reset() {
+      this.camera = 0;
+      this.speed = 0;
+      this.score = 0;
+      this.baseballs = 0;
+      this.combo = 1;
+      this.bestCombo = 1;
+      this.balanceTime = 0;
+      this.angle = 0.08;
+      this.angularVelocity = 0;
+      this.boostCharge = 100;
+      this.boostTimer = 0;
+      this.currentInning = 1;
+      this.nextObstacle = 780;
+      this.nextPickup = 470;
+      this.obstacles = [];
+      this.pickups = [];
+      this.particles = [];
+      this.clouds = Array.from({ length: 6 }, (_, index) => ({
+        x: index * 320 + Math.random() * 120,
+        y: 55 + Math.random() * Math.max(45, this.height * 0.22),
+        scale: 0.55 + Math.random() * 0.65,
+      }));
+      this.releaseControls();
+      this.seedWorld();
+      this.updateUI(true);
+    }
+
+    seedWorld() {
+      while (this.nextPickup < this.width * 2.2) this.spawnPickup();
+      while (this.nextObstacle < this.width * 2.2) this.spawnObstacle();
+    }
+
+    start() {
+      this.reset();
+      this.state = "running";
+      setOverlay(ui.menu, false);
+      setOverlay(ui.result, false);
+      setOverlay(ui.pause, false);
+      ui.hud.hidden = false;
+      ui.balancePanel.hidden = false;
+      ui.boostPanel.hidden = false;
+      ui.controls.hidden = false;
+      ui.pauseButton.hidden = false;
+      this.lastTime = performance.now();
+      this.announce(
+        "Ride started. Press up to move, left to lean back, right to lean forward, and down to lower the wheel.",
+      );
+      if (sounds.enabled) sounds.ensureContext();
+    }
+
+    pause() {
+      if (this.state !== "running") return;
+      this.state = "paused";
+      this.releaseControls();
+      setOverlay(ui.pause, true);
+      ui.controls.hidden = true;
+      ui.pauseButton.hidden = true;
+    }
+
+    resume() {
+      if (this.state !== "paused") return;
+      this.state = "running";
+      setOverlay(ui.pause, false);
+      ui.controls.hidden = false;
+      ui.pauseButton.hidden = false;
+      this.lastTime = performance.now();
+    }
+
+    home() {
+      this.state = "menu";
+      this.releaseControls();
+      setOverlay(ui.pause, false);
+      setOverlay(ui.result, false);
+      setOverlay(ui.menu, true);
+      ui.hud.hidden = true;
+      ui.balancePanel.hidden = true;
+      ui.boostPanel.hidden = true;
+      ui.controls.hidden = true;
+      ui.pauseButton.hidden = true;
+      refreshRecords();
+    }
+
+    setControl(action, pressed) {
+      if (!(action in this.controls)) return;
+      if (pressed && this.state !== "running") return;
+      this.controls[action] = pressed;
+      const buttons = {
+        forward: ui.forwardButton,
+        leanBack: ui.leanBackButton,
+        leanForward: ui.leanForwardButton,
+        wheelDown: ui.wheelDownButton,
+      };
+      buttons[action]?.classList.toggle("is-held", pressed);
+    }
+
+    releaseControls() {
+      for (const action of Object.keys(this.controls)) {
+        this.setControl(action, false);
+      }
+    }
+
+    useBoost() {
+      if (this.state !== "running" || this.boostCharge < 34 || this.boostTimer > 0) return;
+      this.boostCharge -= 34;
+      this.boostTimer = 0.9;
+      sounds.boost();
+      this.burst(this.playerX() - 40, this.groundY() - 20, "#ffb33c", 13, true);
+      this.showToast("Power boost!");
+      if (navigator.vibrate) navigator.vibrate(20);
+    }
+
+    update(dt) {
+      this.demoTime += dt;
+      if (this.state !== "running") {
+        return;
+      }
+
+      const distanceMeters = this.distanceMeters();
+      const topSpeed = 235 + Math.min(distanceMeters * 0.12, 105) + (this.currentInning - 1) * 16;
+      const boostSpeed = this.boostTimer > 0 && this.controls.forward ? 165 : 0;
+      if (this.controls.forward) {
+        this.speed += (topSpeed + boostSpeed - this.speed) * Math.min(1, dt * 2.5);
+      } else {
+        this.speed = Math.max(0, this.speed - 92 * dt);
+      }
+      this.camera += this.speed * dt;
+
+      if (this.boostTimer > 0) this.boostTimer -= dt;
+      this.boostCharge = Math.min(100, this.boostCharge + dt * (this.boostTimer > 0 ? 3 : 9));
+
+      let torque = -0.48 - this.angle * 0.2;
+      if (this.controls.leanBack) torque += 3.42;
+      if (this.controls.leanForward) torque -= 2.48;
+      if (this.controls.wheelDown) torque -= 4.6;
+      const stabilityAssist = this.angle > 1.08 ? -0.58 : 0;
+      this.angularVelocity += (torque + stabilityAssist) * dt;
+      this.angularVelocity *= Math.pow(0.22, dt);
+      this.angularVelocity = clamp(this.angularVelocity, -2.15, 2.05);
+      this.angle += this.angularVelocity * dt;
+
+      if (this.angle <= 0) {
+        this.angle = 0;
+        this.angularVelocity = Math.max(0, this.angularVelocity);
+      }
+
+      const inBalanceZone = this.angle >= 0.46 && this.angle <= 0.96;
+      if (inBalanceZone) {
+        this.balanceTime += dt;
+        this.combo = clamp(1 + Math.floor(this.balanceTime / 1.25), 1, 5);
+        this.bestCombo = Math.max(this.bestCombo, this.combo);
+        this.score += dt * (8 + this.speed * 0.045) * this.combo;
+      } else {
+        this.balanceTime = Math.max(0, this.balanceTime - dt * 1.5);
+        this.combo = clamp(1 + Math.floor(this.balanceTime / 1.25), 1, 5);
+      }
+
+      this.score += dt * this.speed * 0.045;
+
+      if (this.angle > 1.43) {
+        this.crash("loopout");
+        return;
+      }
+
+      const nextInning = Math.floor(distanceMeters / 500) + 1;
+      if (nextInning > this.currentInning) {
+        this.currentInning = nextInning;
+        this.score += 500 * this.currentInning;
+        this.showInning();
+      }
+
+      this.fillWorld();
+      this.checkObjects();
+      this.updateParticles(dt);
+      this.cleanWorld();
+      this.updateUI();
+    }
+
+    fillWorld() {
+      const ahead = this.camera + this.width * 2;
+      while (this.nextPickup < ahead) this.spawnPickup();
+      while (this.nextObstacle < ahead) this.spawnObstacle();
+    }
+
+    spawnPickup() {
+      const difficulty = Math.min(1, (this.currentInning - 1) * 0.2);
+      const minAngle = 0.28 + Math.random() * (0.42 + difficulty * 0.18);
+      this.pickups.push({
+        x: this.nextPickup,
+        minAngle,
+        checked: false,
+        collected: false,
+        phase: Math.random() * Math.PI * 2,
+      });
+      this.nextPickup += 245 + Math.random() * 230;
+    }
+
+    spawnObstacle() {
+      const inning = innings[(this.currentInning - 1) % innings.length];
+      const available = inning.obstacles;
+      const type = available[Math.floor(Math.random() * available.length)];
+      this.obstacles.push({
+        x: this.nextObstacle,
+        type,
+        checked: false,
+        cleared: false,
+      });
+      const spacing = Math.max(470, 780 - this.currentInning * 28);
+      this.nextObstacle += spacing + Math.random() * 390;
+    }
+
+    checkObjects() {
+      const checkX = this.camera + this.playerX() + 72;
+
+      for (const pickup of this.pickups) {
+        if (pickup.checked || checkX < pickup.x) continue;
+        pickup.checked = true;
+        if (this.angle >= pickup.minAngle - 0.16 && this.angle <= 1.3) {
+          pickup.collected = true;
+          this.baseballs += 1;
+          save.totalBaseballs += 1;
+          writeSave();
+          this.score += 120 * this.combo;
+          sounds.collect();
+          this.burst(
+            pickup.x - this.camera,
+            this.pickupY(pickup),
+            "#ffffff",
+            9,
+            false,
+          );
+          this.showToast(this.baseballs % 5 === 0 ? "Run scored! +500" : `Catch! ×${this.combo}`);
+          if (this.baseballs % 5 === 0) {
+            this.score += 500;
+            sounds.inning();
+          }
+        }
+      }
+
+      for (const obstacle of this.obstacles) {
+        if (obstacle.checked || checkX < obstacle.x) continue;
+        obstacle.checked = true;
+        const data = obstacleTypes[obstacle.type];
+
+        if (this.angle < data.requiredAngle) {
+          this.crash(obstacle.type);
+          return;
+        }
+
+        obstacle.cleared = true;
+        this.score += data.points * this.combo;
+        sounds.clear();
+        this.burst(obstacle.x - this.camera, this.groundY() - data.height / 2, "#c7ff45", 7);
+        this.showToast(`${data.label} cleared! +${data.points * this.combo}`);
+      }
+    }
+
+    cleanWorld() {
+      const behind = this.camera - 160;
+      this.pickups = this.pickups.filter((item) => item.x > behind);
+      this.obstacles = this.obstacles.filter((item) => item.x > behind);
+    }
+
+    crash(reason) {
+      if (this.state !== "running") return;
+      this.state = "crashed";
+      this.releaseControls();
+      sounds.crash();
+      if (navigator.vibrate) navigator.vibrate([45, 35, 90]);
+      this.burst(this.playerX() + 40, this.groundY() - 28, "#ff7a32", 24, true);
+
+      const finalScore = Math.floor(this.score);
+      const isNewBest = finalScore > save.bestScore;
+      if (isNewBest) save.bestScore = finalScore;
+      writeSave();
+
+      const messages = {
+        loopout: {
+          title: "Too far back!",
+          message: "Release a little earlier to keep the bike in the green balance zone.",
+        },
+        cone: {
+          title: "Cone collision!",
+          message: "Lift the front wheel before the cone reaches your bike.",
+        },
+        glove: {
+          title: "Glove down!",
+          message: "The glove needs a higher wheelie. Hold a little longer next time.",
+        },
+        bats: {
+          title: "Bats in the lane!",
+          message: "That stack needs a big, controlled wheelie to clear it.",
+        },
+      };
+
+      const result = messages[reason] || messages.cone;
+      ui.resultTitle.textContent = result.title;
+      ui.resultMessage.textContent = result.message;
+      ui.resultScore.textContent = formatNumber(finalScore);
+      ui.resultDistance.textContent = formatNumber(this.distanceMeters());
+      ui.resultBaseballs.textContent = this.baseballs;
+      ui.resultCombo.textContent = `×${this.bestCombo}`;
+      ui.newBest.hidden = !isNewBest;
+
+      ui.controls.hidden = true;
+      ui.pauseButton.hidden = true;
+      window.setTimeout(() => setOverlay(ui.result, true), 420);
+      this.announce(`${result.title} Final score ${finalScore}.`);
+    }
+
+    updateParticles(dt) {
+      for (const particle of this.particles) {
+        particle.life -= dt;
+        particle.x += particle.vx * dt;
+        particle.y += particle.vy * dt;
+        particle.vy += 220 * dt;
+        particle.rotation += particle.spin * dt;
+      }
+      this.particles = this.particles.filter((particle) => particle.life > 0);
+    }
+
+    burst(x, y, color, count, sparks = false) {
+      for (let index = 0; index < count; index += 1) {
+        const angle = Math.random() * Math.PI * 2;
+        const velocity = (sparks ? 95 : 58) + Math.random() * (sparks ? 150 : 100);
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * velocity,
+          vy: Math.sin(angle) * velocity - 35,
+          life: 0.42 + Math.random() * 0.55,
+          maxLife: 1,
+          size: 2 + Math.random() * (sparks ? 6 : 4),
+          color,
+          rotation: Math.random() * Math.PI,
+          spin: -5 + Math.random() * 10,
+        });
+      }
+    }
+
+    showToast(message) {
+      clearTimeout(this.toastTimer);
+      ui.toast.textContent = message;
+      ui.toast.hidden = false;
+      ui.toast.style.animation = "none";
+      void ui.toast.offsetWidth;
+      ui.toast.style.animation = "";
+      this.toastTimer = window.setTimeout(() => {
+        ui.toast.hidden = true;
+      }, 900);
+    }
+
+    showInning() {
+      const inning = innings[(this.currentInning - 1) % innings.length];
+      ui.bannerEyebrow.textContent =
+        this.currentInning <= 3 ? "NEXT UP" : "EXTRA INNINGS";
+      ui.bannerTitle.textContent = `INNING ${this.currentInning}`;
+      ui.bannerSubtitle.textContent = inning.name;
+      ui.banner.hidden = false;
+      ui.banner.style.animation = "none";
+      void ui.banner.offsetWidth;
+      ui.banner.style.animation = "";
+      clearTimeout(this.bannerTimer);
+      this.bannerTimer = window.setTimeout(() => {
+        ui.banner.hidden = true;
+      }, 2400);
+      sounds.inning();
+      this.announce(`Inning ${this.currentInning}: ${inning.name}`);
+    }
+
+    updateUI(force = false) {
+      if (this.state !== "running" && !force) return;
+      ui.score.textContent = formatNumber(Math.floor(this.score));
+      ui.baseballs.textContent = this.baseballs;
+      ui.distance.textContent = formatNumber(this.distanceMeters());
+      ui.inning.textContent = this.currentInning;
+      ui.combo.textContent = `×${this.combo}`;
+
+      const normalizedAngle = clamp(this.angle / 1.43, 0, 1);
+      ui.balanceNeedle.style.left = `${normalizedAngle * 100}%`;
+      ui.boostFill.style.transform = `scaleX(${this.boostCharge / 100})`;
+      ui.boostButton.disabled = this.boostCharge < 34 || this.boostTimer > 0;
+    }
+
+    distanceMeters() {
+      return Math.floor(this.camera / 10);
+    }
+
+    groundY() {
+      return Math.floor(this.height * (this.width < 640 ? 0.68 : 0.76));
+    }
+
+    playerX() {
+      return clamp(this.width * 0.22, 105, 250);
+    }
+
+    pickupY(pickup) {
+      const wheelLift = Math.sin(pickup.minAngle) * 92;
+      return this.groundY() - 30 - wheelLift - Math.sin(this.demoTime * 5 + pickup.phase) * 5;
+    }
+
+    announce(message) {
+      ui.live.textContent = "";
+      window.setTimeout(() => {
+        ui.live.textContent = message;
+      }, 20);
+    }
+
+    frame(time) {
+      const dt = Math.min(0.034, Math.max(0, (time - this.lastTime) / 1000));
+      this.lastTime = time;
+      this.update(dt);
+      this.draw();
+      requestAnimationFrame((nextTime) => this.frame(nextTime));
+    }
+
+    draw() {
+      ctx.save();
+      ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+      ctx.clearRect(0, 0, this.width, this.height);
+      this.drawBackground();
+      this.drawObjects();
+      this.drawBike();
+      this.drawParticles();
+      this.drawSpeedLines();
+      ctx.restore();
+    }
+
+    drawBackground() {
+      const inning = innings[(this.currentInning - 1) % innings.length];
+      const gradient = ctx.createLinearGradient(0, 0, 0, this.groundY());
+      gradient.addColorStop(0, inning.skyTop);
+      gradient.addColorStop(1, inning.skyBottom);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, this.width, this.groundY());
+
+      if ((this.currentInning - 1) % innings.length >= 1) {
+        this.drawStars();
+      } else {
+        this.drawSun();
+      }
+
+      this.drawClouds();
+      this.drawStadiumLights();
+
+      const fenceTop = this.groundY() - 88;
+      ctx.fillStyle = inning.fence;
+      ctx.fillRect(0, fenceTop, this.width, 88);
+
+      ctx.strokeStyle = "rgba(255,255,255,.18)";
+      ctx.lineWidth = 1;
+      const fenceOffset = -((this.camera * 0.28) % 34);
+      for (let x = fenceOffset; x < this.width + 34; x += 34) {
+        ctx.beginPath();
+        ctx.moveTo(x, fenceTop);
+        ctx.lineTo(x + 34, this.groundY());
+        ctx.moveTo(x + 34, fenceTop);
+        ctx.lineTo(x, this.groundY());
+        ctx.stroke();
+      }
+
+      ctx.fillStyle = "rgba(255,255,255,.9)";
+      ctx.fillRect(0, fenceTop, this.width, 5);
+
+      this.drawScoreboard(fenceTop);
+
+      ctx.fillStyle = inning.grass;
+      ctx.fillRect(0, this.groundY(), this.width, this.height - this.groundY());
+
+      const stripeWidth = 150;
+      const stripeOffset = -((this.camera * 0.64) % (stripeWidth * 2));
+      ctx.fillStyle = "rgba(255,255,255,.045)";
+      for (let x = stripeOffset; x < this.width + stripeWidth; x += stripeWidth * 2) {
+        ctx.fillRect(x, this.groundY(), stripeWidth, this.height - this.groundY());
+      }
+
+      ctx.fillStyle = "#b98350";
+      ctx.fillRect(0, this.groundY() - 3, this.width, 33);
+      ctx.fillStyle = "#dba974";
+      ctx.fillRect(0, this.groundY() - 3, this.width, 6);
+
+      ctx.strokeStyle = "rgba(255,255,255,.9)";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(0, this.groundY() + 31);
+      ctx.lineTo(this.width, this.groundY() + 31);
+      ctx.stroke();
+
+      const chalkOffset = -((this.camera * 0.95) % 110);
+      ctx.fillStyle = "rgba(255,255,255,.55)";
+      for (let x = chalkOffset; x < this.width + 110; x += 110) {
+        ctx.fillRect(x, this.groundY() + 29, 44, 4);
+      }
+    }
+
+    drawSun() {
+      const x = this.width * 0.78;
+      const y = this.height * 0.17;
+      const glow = ctx.createRadialGradient(x, y, 2, x, y, 70);
+      glow.addColorStop(0, "rgba(255,246,163,.95)");
+      glow.addColorStop(0.3, "rgba(255,225,91,.5)");
+      glow.addColorStop(1, "rgba(255,225,91,0)");
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(x, y, 70, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#fff0a2";
+      ctx.beginPath();
+      ctx.arc(x, y, 27, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    drawStars() {
+      ctx.fillStyle = "rgba(255,255,255,.75)";
+      for (let index = 0; index < 30; index += 1) {
+        const x = (index * 97 + 31) % this.width;
+        const y = (index * 43 + 18) % Math.max(80, this.groundY() - 120);
+        const radius = index % 7 === 0 ? 1.5 : 0.8;
+        ctx.beginPath();
+        ctx.arc(x, y, radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    drawClouds() {
+      const isNight = (this.currentInning - 1) % innings.length >= 1;
+      ctx.fillStyle = isNight ? "rgba(255,255,255,.08)" : "rgba(255,255,255,.44)";
+      for (const cloud of this.clouds) {
+        const x = ((cloud.x - this.camera * 0.05) % (this.width + 260)) - 80;
+        const y = cloud.y;
+        const scale = cloud.scale;
+        ctx.beginPath();
+        ctx.arc(x, y, 26 * scale, Math.PI, 0);
+        ctx.arc(x + 30 * scale, y - 10 * scale, 32 * scale, Math.PI, 0);
+        ctx.arc(x + 65 * scale, y, 24 * scale, Math.PI, 0);
+        ctx.lineTo(x + 65 * scale, y + 10 * scale);
+        ctx.lineTo(x, y + 10 * scale);
+        ctx.closePath();
+        ctx.fill();
+      }
+    }
+
+    drawStadiumLights() {
+      const baseY = this.groundY() - 88;
+      const spacing = Math.max(360, this.width * 0.55);
+      const offset = -((this.camera * 0.17) % spacing);
+
+      for (let x = offset; x < this.width + spacing; x += spacing) {
+        ctx.strokeStyle = "rgba(7,17,31,.5)";
+        ctx.lineWidth = 7;
+        ctx.beginPath();
+        ctx.moveTo(x, baseY + 4);
+        ctx.lineTo(x, Math.max(72, baseY - 210));
+        ctx.stroke();
+
+        const lightY = Math.max(65, baseY - 215);
+        ctx.fillStyle = "#14233a";
+        roundRect(ctx, x - 52, lightY, 104, 42, 7);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255,248,195,.94)";
+        for (let row = 0; row < 2; row += 1) {
+          for (let col = 0; col < 5; col += 1) {
+            ctx.beginPath();
+            ctx.arc(x - 38 + col * 19, lightY + 12 + row * 17, 5, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    drawScoreboard(fenceTop) {
+      const loop = Math.max(1400, this.width * 2.1);
+      let x = this.width - ((this.camera * 0.2 + 180) % loop);
+      if (x < -250) x += loop;
+      const y = fenceTop - 78;
+
+      ctx.fillStyle = "#08253a";
+      roundRect(ctx, x, y, 220, 94, 9);
+      ctx.fill();
+      ctx.strokeStyle = "#d9f2ff";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      ctx.fillStyle = "#c7ff45";
+      ctx.font = "900 13px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("WHEELIE FIELD", x + 110, y + 24);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "800 10px system-ui, sans-serif";
+      ctx.fillText("RUNS", x + 50, y + 48);
+      ctx.fillText("INNING", x + 110, y + 48);
+      ctx.fillText("BEST", x + 171, y + 48);
+
+      ctx.fillStyle = "#ffbd48";
+      ctx.font = "900 21px ui-monospace, monospace";
+      ctx.fillText(String(Math.floor(this.baseballs / 5)), x + 50, y + 75);
+      ctx.fillText(String(this.currentInning), x + 110, y + 75);
+      ctx.fillText(shortNumber(save.bestScore), x + 171, y + 75);
+      ctx.textAlign = "start";
+    }
+
+    drawObjects() {
+      for (const pickup of this.pickups) {
+        if (pickup.collected) continue;
+        const x = pickup.x - this.camera;
+        if (x < -50 || x > this.width + 50) continue;
+        this.drawBaseball(x, this.pickupY(pickup), 13);
+      }
+
+      for (const obstacle of this.obstacles) {
+        if (obstacle.cleared) continue;
+        const x = obstacle.x - this.camera;
+        if (x < -80 || x > this.width + 80) continue;
+        this.drawObstacle(x, obstacle.type);
+      }
+    }
+
+    drawBaseball(x, y, radius) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(this.demoTime * 2.5);
+      ctx.shadowColor = "rgba(255,255,255,.72)";
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = "#fffdf4";
+      ctx.beginPath();
+      ctx.arc(0, 0, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#d64d4d";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(-7, 0, 8, -1.1, 1.1);
+      ctx.arc(7, 0, 8, 2.05, 4.2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawObstacle(x, type) {
+      const y = this.groundY();
+      ctx.save();
+      ctx.translate(x, y);
+
+      if (type === "cone") {
+        ctx.fillStyle = "rgba(0,0,0,.16)";
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 28, 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#ff6a2a";
+        ctx.beginPath();
+        ctx.moveTo(-19, 0);
+        ctx.lineTo(0, -51);
+        ctx.lineTo(19, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillRect(-27, -3, 54, 8);
+        ctx.fillStyle = "#fff8df";
+        ctx.beginPath();
+        ctx.moveTo(-11, -19);
+        ctx.lineTo(-7, -30);
+        ctx.lineTo(7, -30);
+        ctx.lineTo(11, -19);
+        ctx.closePath();
+        ctx.fill();
+      } else if (type === "glove") {
+        ctx.fillStyle = "rgba(0,0,0,.17)";
+        ctx.beginPath();
+        ctx.ellipse(0, 3, 29, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.rotate(-0.2);
+        ctx.fillStyle = "#a95d2b";
+        roundRect(ctx, -24, -36, 48, 37, 13);
+        ctx.fill();
+        for (let finger = 0; finger < 4; finger += 1) {
+          roundRect(ctx, -20 + finger * 11, -48 - (finger % 2) * 3, 10, 25, 6);
+          ctx.fill();
+        }
+        ctx.strokeStyle = "#f0b477";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(1, -19, 14, 0.1, Math.PI - 0.1);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = "rgba(0,0,0,.17)";
+        ctx.beginPath();
+        ctx.ellipse(0, 3, 34, 8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        const colors = ["#dfaa61", "#f2c885", "#b97d3f"];
+        [-0.32, 0, 0.34].forEach((rotation, index) => {
+          ctx.save();
+          ctx.rotate(rotation);
+          ctx.fillStyle = colors[index];
+          roundRect(ctx, -5, -54, 10, 52, 5);
+          ctx.fill();
+          ctx.fillStyle = "#222c38";
+          ctx.fillRect(-6, -9, 12, 7);
+          ctx.restore();
+        });
+      }
+
+      ctx.restore();
+    }
+
+    drawBike() {
+      const x = this.playerX();
+      const y = this.groundY() - 21;
+      const isCrashed = this.state === "crashed";
+      const displayAngle =
+        this.state === "menu"
+          ? 0.48 + Math.sin(this.demoTime * 1.5) * 0.08
+          : this.angle + (isCrashed ? Math.min(0.5, (performance.now() - this.lastTime) * 0.0002) : 0);
+      const bike = bikes.find((item) => item.id === save.selectedBike) || bikes[0];
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(-displayAngle);
+
+      const wheelRotation = this.camera * 0.06;
+      this.drawWheel(0, 0, wheelRotation);
+      this.drawWheel(94, 0, wheelRotation);
+
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      ctx.strokeStyle = bike.color;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(4, -3);
+      ctx.lineTo(39, -40);
+      ctx.lineTo(67, -4);
+      ctx.lineTo(4, -3);
+      ctx.lineTo(57, -5);
+      ctx.lineTo(75, -37);
+      ctx.lineTo(94, 0);
+      ctx.stroke();
+
+      ctx.fillStyle = "#182330";
+      roundRect(ctx, 38, -45, 28, 12, 6);
+      ctx.fill();
+      ctx.fillStyle = bike.accent;
+      roundRect(ctx, 44, -40, 22, 13, 4);
+      ctx.fill();
+
+      ctx.strokeStyle = "#162432";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(73, -38);
+      ctx.lineTo(82, -50);
+      ctx.lineTo(94, -49);
+      ctx.moveTo(38, -40);
+      ctx.lineTo(33, -52);
+      ctx.lineTo(24, -52);
+      ctx.stroke();
+
+      this.drawRider(bike);
+
+      if (this.boostTimer > 0 && this.state === "running") {
+        const flame = 14 + Math.random() * 15;
+        ctx.fillStyle = "#fff1a6";
+        ctx.beginPath();
+        ctx.moveTo(-7, -28);
+        ctx.lineTo(-flame - 7, -34);
+        ctx.lineTo(-8, -39);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = "#ff6a2a";
+        ctx.beginPath();
+        ctx.moveTo(-4, -29);
+        ctx.lineTo(-flame, -34);
+        ctx.lineTo(-5, -37);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+
+    drawWheel(x, y, rotation) {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rotation);
+      ctx.fillStyle = "#0d141c";
+      ctx.beginPath();
+      ctx.arc(0, 0, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#d8e5ec";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 16, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(216,229,236,.65)";
+      ctx.lineWidth = 1;
+      for (let spoke = 0; spoke < 8; spoke += 1) {
+        ctx.rotate(Math.PI / 4);
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(15, 0);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "#8193a1";
+      ctx.beginPath();
+      ctx.arc(0, 0, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    drawRider(bike) {
+      ctx.strokeStyle = "#142231";
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(50, -67);
+      ctx.lineTo(37, -44);
+      ctx.lineTo(56, -21);
+      ctx.moveTo(53, -65);
+      ctx.lineTo(76, -48);
+      ctx.stroke();
+
+      ctx.fillStyle = bike.accent;
+      ctx.beginPath();
+      ctx.moveTo(42, -86);
+      ctx.quadraticCurveTo(58, -94, 68, -80);
+      ctx.lineTo(57, -57);
+      ctx.lineTo(37, -68);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = bike.color;
+      ctx.font = "900 12px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("9", 51, -70);
+      ctx.textAlign = "start";
+
+      ctx.fillStyle = "#d79a73";
+      ctx.beginPath();
+      ctx.arc(50, -100, 11, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = bike.color;
+      ctx.beginPath();
+      ctx.arc(49, -103, 15, Math.PI, Math.PI * 2);
+      ctx.lineTo(65, -98);
+      ctx.lineTo(39, -98);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = bike.accent;
+      ctx.fillRect(44, -116, 16, 4);
+    }
+
+    drawParticles() {
+      for (const particle of this.particles) {
+        ctx.save();
+        ctx.globalAlpha = clamp(particle.life / 0.5, 0, 1);
+        ctx.translate(particle.x, particle.y);
+        ctx.rotate(particle.rotation);
+        ctx.fillStyle = particle.color;
+        ctx.fillRect(-particle.size / 2, -particle.size / 2, particle.size, particle.size);
+        ctx.restore();
+      }
+    }
+
+    drawSpeedLines() {
+      if (this.boostTimer <= 0 || this.state !== "running") return;
+      ctx.strokeStyle = "rgba(255,255,255,.42)";
+      ctx.lineWidth = 2;
+      for (let index = 0; index < 12; index += 1) {
+        const y = 30 + ((index * 67 + this.demoTime * 310) % Math.max(80, this.groundY() - 40));
+        const x = (index * 127 + this.demoTime * 520) % (this.width + 180);
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x - 55 - (index % 3) * 25, y);
+        ctx.stroke();
+      }
+    }
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function formatNumber(value) {
+    return new Intl.NumberFormat("en-US").format(value);
+  }
+
+  function shortNumber(value) {
+    if (value >= 1000) return `${Math.floor(value / 100) / 10}K`;
+    return String(value);
+  }
+
+  function roundRect(context, x, y, width, height, radius) {
+    const r = Math.min(radius, width / 2, height / 2);
+    context.beginPath();
+    context.moveTo(x + r, y);
+    context.arcTo(x + width, y, x + width, y + height, r);
+    context.arcTo(x + width, y + height, x, y + height, r);
+    context.arcTo(x, y + height, x, y, r);
+    context.arcTo(x, y, x + width, y, r);
+    context.closePath();
+  }
+
+  function setOverlay(element, visible) {
+    if (visible) {
+      element.hidden = false;
+      requestAnimationFrame(() => element.classList.add("overlay--visible"));
+    } else {
+      element.classList.remove("overlay--visible");
+      window.setTimeout(() => {
+        if (!element.classList.contains("overlay--visible")) element.hidden = true;
+      }, 190);
+    }
+  }
+
+  function updateSoundButton() {
+    const icon = sounds.enabled ? "🔊" : "🔇";
+    ui.soundButton.querySelector("span").textContent = icon;
+    ui.soundButton.setAttribute("aria-label", sounds.enabled ? "Turn sound off" : "Turn sound on");
+  }
+
+  function refreshRecords() {
+    ui.menuBest.textContent = formatNumber(save.bestScore);
+    ui.menuBaseballs.textContent = formatNumber(save.totalBaseballs);
+    ui.garageBaseballs.textContent = formatNumber(save.totalBaseballs);
+    renderGarage();
+  }
+
+  function renderGarage() {
+    ui.bikeList.innerHTML = "";
+    for (const bike of bikes) {
+      const unlocked = save.totalBaseballs >= bike.cost;
+      const selected = save.selectedBike === bike.id;
+      const card = document.createElement("article");
+      card.className = `bike-card${selected ? " is-selected" : ""}`;
+      card.innerHTML = `
+        <div class="bike-swatch" style="color:${bike.color}; box-shadow:inset 0 -3px 0 ${bike.color}22">
+          ${bike.icon}
+        </div>
+        <h3>${bike.name}</h3>
+        <p>${bike.description}</p>
+        <button type="button" data-bike="${bike.id}" ${unlocked ? "" : "disabled"}>
+          ${selected ? "Selected" : unlocked ? "Choose bike" : `🔒 ${bike.cost} balls`}
+        </button>
+      `;
+      ui.bikeList.appendChild(card);
+    }
+  }
+
+  const game = new WheelieGame();
+
+  ui.start.addEventListener("click", () => game.start());
+  ui.restart.addEventListener("click", () => game.start());
+  ui.resume.addEventListener("click", () => game.resume());
+  ui.home.addEventListener("click", () => game.home());
+  ui.pauseHome.addEventListener("click", () => game.home());
+  ui.pauseButton.addEventListener("click", () => game.pause());
+  ui.soundButton.addEventListener("click", () => sounds.toggle());
+
+  function openGarage() {
+    refreshRecords();
+    ui.garage.showModal();
+  }
+
+  ui.garageButton.addEventListener("click", openGarage);
+  ui.resultGarageButton.addEventListener("click", openGarage);
+  ui.bikeList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-bike]");
+    if (!button || button.disabled) return;
+    save.selectedBike = button.dataset.bike;
+    writeSave();
+    renderGarage();
+  });
+
+  const controlButtons = {
+    forward: ui.forwardButton,
+    leanBack: ui.leanBackButton,
+    leanForward: ui.leanForwardButton,
+    wheelDown: ui.wheelDownButton,
+  };
+
+  for (const [action, button] of Object.entries(controlButtons)) {
+    button.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      game.setControl(action, true);
+      button.setPointerCapture?.(event.pointerId);
+    });
+    const release = (event) => {
+      event.preventDefault();
+      game.setControl(action, false);
+    };
+    button.addEventListener("pointerup", release);
+    button.addEventListener("pointercancel", release);
+    button.addEventListener("lostpointercapture", () => game.setControl(action, false));
+  }
+
+  ui.boostButton.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    game.useBoost();
+  });
+
+  const keyActions = {
+    KeyW: "forward",
+    ArrowUp: "forward",
+    KeyA: "leanBack",
+    ArrowLeft: "leanBack",
+    KeyD: "leanForward",
+    ArrowRight: "leanForward",
+    KeyS: "wheelDown",
+    ArrowDown: "wheelDown",
+  };
+
+  document.addEventListener("keydown", (event) => {
+    const action = keyActions[event.code];
+    if (action) {
+      event.preventDefault();
+      if (!event.repeat) game.setControl(action, true);
+    }
+    if (["KeyX", "ShiftLeft", "ShiftRight"].includes(event.code)) {
+      event.preventDefault();
+      if (!event.repeat) game.useBoost();
+    }
+    if (event.code === "Escape" || event.code === "KeyP") {
+      if (game.state === "running") game.pause();
+      else if (game.state === "paused") game.resume();
+    }
+  });
+
+  document.addEventListener("keyup", (event) => {
+    const action = keyActions[event.code];
+    if (action) {
+      event.preventDefault();
+      game.setControl(action, false);
+    }
+  });
+
+  window.addEventListener("blur", () => {
+    if (game.state === "running") game.pause();
+  });
+  window.addEventListener("resize", () => game.resize());
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden && game.state === "running") game.pause();
+  });
+
+  updateSoundButton();
+  refreshRecords();
+
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => {
+        // Offline support is optional; the game still works without it.
+      });
+    });
+  }
+})();
