@@ -52,6 +52,14 @@
     bannerSubtitle: $("#inningBannerSubtitle"),
     toast: $("#toast"),
     live: $("#liveRegion"),
+    playerBadge: $("#playerBadge"),
+    playerUsername: $("#playerUsername"),
+    usernameDialog: $("#usernameDialog"),
+    usernameForm: $("#usernameForm"),
+    usernameInput: $("#usernameInput"),
+    usernameStatus: $("#usernameStatus"),
+    usernameSuggestions: $("#usernameSuggestions"),
+    claimUsername: $("#claimUsernameButton"),
   };
 
   const STORAGE_KEY = "wheelie-slugger-save-v1";
@@ -325,6 +333,9 @@
       ownedBikes: ["rookie"],
       selectedBike: "rookie",
       soundOn: false,
+      username: null,
+      playerId: null,
+      playerToken: null,
     };
 
     try {
@@ -494,6 +505,10 @@
     }
 
     start() {
+      if (!save.username) {
+        openUsernameDialog();
+        return;
+      }
       this.reset();
       this.state = "running";
       setOverlay(ui.menu, false);
@@ -1463,6 +1478,120 @@
     renderGarage();
   }
 
+  function refreshPlayerIdentity() {
+    const hasUsername = Boolean(save.username);
+    ui.playerBadge.hidden = !hasUsername;
+    ui.start.disabled = !hasUsername;
+    ui.playerUsername.textContent = hasUsername ? save.username : "";
+  }
+
+  function openUsernameDialog() {
+    if (!ui.usernameDialog.open) ui.usernameDialog.showModal();
+    window.setTimeout(() => ui.usernameInput.focus(), 50);
+  }
+
+  function normalizeUsername(value) {
+    return value.trim();
+  }
+
+  function validateUsername(username) {
+    if (username.length < 3 || username.length > 16) {
+      return "Use between 3 and 16 characters.";
+    }
+    if (!/^[A-Za-z0-9_]+$/.test(username)) {
+      return "Use only letters, numbers, and underscores.";
+    }
+    return "";
+  }
+
+  function showUsernameSuggestions(username) {
+    const base = username.replace(/[^A-Za-z0-9_]/g, "").slice(0, 12) || "Rider";
+    const suggestions = Array.from(
+      { length: 3 },
+      () => `${base}${Math.floor(10 + Math.random() * 9999)}`.slice(0, 16),
+    );
+    ui.usernameSuggestions.innerHTML = "<span>Try one of these:</span>";
+    for (const suggestion of suggestions) {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = `@${suggestion}`;
+      button.addEventListener("click", () => {
+        ui.usernameInput.value = suggestion;
+        ui.usernameInput.focus();
+        ui.usernameStatus.textContent = "";
+      });
+      ui.usernameSuggestions.appendChild(button);
+    }
+    ui.usernameSuggestions.hidden = false;
+  }
+
+  async function claimUsername(event) {
+    event.preventDefault();
+    const username = normalizeUsername(ui.usernameInput.value);
+    const validationMessage = validateUsername(username);
+    ui.usernameSuggestions.hidden = true;
+    if (validationMessage) {
+      ui.usernameStatus.textContent = validationMessage;
+      ui.usernameStatus.dataset.state = "error";
+      return;
+    }
+
+    const config = window.WHEELIE_CONFIG;
+    if (!config?.supabaseUrl || !config?.supabasePublishableKey) {
+      ui.usernameStatus.textContent = "Username service is not configured yet.";
+      ui.usernameStatus.dataset.state = "error";
+      return;
+    }
+
+    ui.claimUsername.disabled = true;
+    ui.claimUsername.textContent = "Checking…";
+    ui.usernameStatus.textContent = "Checking availability…";
+    ui.usernameStatus.dataset.state = "loading";
+
+    try {
+      const response = await fetch(`${config.supabaseUrl}/rest/v1/rpc/reserve_username`, {
+        method: "POST",
+        headers: {
+          apikey: config.supabasePublishableKey,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({ requested_username: username }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) throw new Error(result?.message || `Request failed (${response.status})`);
+
+      if (!result?.ok) {
+        const messages = {
+          taken: `@${username} is already taken.`,
+          length: "Use between 3 and 16 characters.",
+          format: "Use only letters, numbers, and underscores.",
+        };
+        ui.usernameStatus.textContent = messages[result?.error] || "That name cannot be used.";
+        ui.usernameStatus.dataset.state = "error";
+        if (result?.error === "taken") showUsernameSuggestions(username);
+        return;
+      }
+
+      save.username = result.username;
+      save.playerId = result.playerId;
+      save.playerToken = result.playerToken;
+      writeSave();
+      refreshPlayerIdentity();
+      ui.usernameStatus.textContent = `@${save.username} is yours!`;
+      ui.usernameStatus.dataset.state = "success";
+      window.setTimeout(() => ui.usernameDialog.close(), 450);
+      game.announce(`Welcome to Wheelie Slugger, ${save.username}.`);
+    } catch (error) {
+      console.error("Username reservation failed:", error);
+      ui.usernameStatus.textContent = "Could not connect. Check your internet and try again.";
+      ui.usernameStatus.dataset.state = "error";
+    } finally {
+      ui.claimUsername.disabled = false;
+      ui.claimUsername.textContent = "Claim player name";
+    }
+  }
+
   function renderGarage() {
     ui.bikeList.innerHTML = "";
     for (const [bikeIndex, bike] of bikes.entries()) {
@@ -1500,6 +1629,13 @@
   }
 
   const game = new WheelieGame();
+
+  refreshPlayerIdentity();
+  ui.usernameForm.addEventListener("submit", claimUsername);
+  ui.usernameDialog.addEventListener("cancel", (event) => {
+    if (!save.username) event.preventDefault();
+  });
+  if (!save.username) window.setTimeout(openUsernameDialog, 0);
 
   ui.start.addEventListener("click", () => game.start());
   ui.restart.addEventListener("click", () => game.start());
