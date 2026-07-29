@@ -1300,6 +1300,111 @@ h2 {
   color: var(--ink);
 }
 
+.leaderboard-dialog {
+  width: min(760px, calc(100% - 28px));
+  max-height: calc(100dvh - 28px);
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--ink);
+}
+
+.leaderboard-dialog::backdrop {
+  background: rgba(2, 7, 12, 0.82);
+  backdrop-filter: blur(10px);
+}
+
+.leaderboard-card {
+  max-height: calc(100dvh - 28px);
+  padding: clamp(22px, 4vw, 34px);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(145deg, #122a43, var(--navy-900));
+  box-shadow: var(--shadow);
+}
+
+.leaderboard-status {
+  margin: 15px 0 0;
+  padding: 10px 12px;
+  border-radius: 11px;
+  background: rgba(199, 255, 69, 0.08);
+  color: var(--lime);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.leaderboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.leaderboard-grid section {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.leaderboard-grid h3 {
+  margin: 0;
+  color: var(--lime);
+  font-size: 16px;
+}
+
+.leaderboard-grid section > p {
+  margin: 4px 0 12px;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.leaderboard-grid ol {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.leaderboard-grid li {
+  display: grid;
+  grid-template-columns: 25px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-height: 34px;
+  padding: 6px 9px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 11px;
+}
+
+.leaderboard-grid li > b {
+  color: #ffd766;
+  text-align: center;
+}
+
+.leaderboard-grid li > span {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.leaderboard-grid li > strong {
+  color: var(--cyan);
+  font-variant-numeric: tabular-nums;
+}
+
+.leaderboard-grid li.is-current-player {
+  outline: 1px solid var(--lime);
+  background: rgba(199, 255, 69, 0.09);
+}
+
 .settings-dialog::backdrop {
   background: rgba(2, 7, 12, 0.78);
   backdrop-filter: blur(10px);
@@ -1942,6 +2047,10 @@ h2 {
 
   .challenge-timer > small {
     display: none;
+  }
+
+  .leaderboard-grid {
+    grid-template-columns: 1fr;
   }
 }
 
