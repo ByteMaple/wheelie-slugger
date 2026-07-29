@@ -16,6 +16,10 @@
     combo: $("#comboValue"),
     boostPanel: $("#boostPanel"),
     boostFill: $("#boostFill"),
+    challengeTimer: $("#challengeTimerPanel"),
+    challengeTimerName: $("#challengeTimerName"),
+    challengeTimerValue: $("#challengeTimerValue"),
+    challengeTimerGoal: $("#challengeTimerGoal"),
     menu: $("#menuOverlay"),
     result: $("#resultOverlay"),
     pause: $("#pauseOverlay"),
@@ -44,6 +48,8 @@
     challengeReward: $("#dailyChallengeReward"),
     challengeFill: $("#dailyChallengeFill"),
     challengeProgress: $("#dailyChallengeProgress"),
+    challengeCard: $("#dailyChallengeCard"),
+    challengeAction: $("#dailyChallengeAction"),
     garageBaseballs: $("#garageBaseballs"),
     resultScore: $("#resultScore"),
     resultDistance: $("#resultDistance"),
@@ -350,6 +356,7 @@
       goal: 750,
       reward: 450,
       unit: "m",
+      seconds: 30,
     },
     {
       id: "wheelie-landings",
@@ -358,6 +365,7 @@
       goal: 3,
       reward: 550,
       unit: "landings",
+      seconds: 75,
     },
     {
       id: "tag-jumps",
@@ -366,6 +374,7 @@
       goal: 3,
       reward: 600,
       unit: "tags",
+      seconds: 75,
     },
     {
       id: "catch-streak",
@@ -374,6 +383,7 @@
       goal: 15,
       reward: 400,
       unit: "catches",
+      seconds: 60,
     },
   ];
 
@@ -566,6 +576,9 @@
       this.height = 0;
       this.dpr = 1;
       this.state = "menu";
+      this.challengeMode = false;
+      this.challengeTimeRemaining = 0;
+      this.lastRunWasChallenge = false;
       this.lastTime = performance.now();
       this.demoTime = 0;
       this.controls = {
@@ -632,12 +645,25 @@
       while (this.nextObstacle < this.width * 2.2) this.spawnObstacle();
     }
 
-    start() {
+    start(challengeMode = false) {
       if (!save.username) {
         openUsernameDialog();
         return;
       }
       this.reset();
+      this.challengeMode = challengeMode;
+      this.lastRunWasChallenge = challengeMode;
+      if (challengeMode) {
+        const challenge = ensureDailyChallenge();
+        this.challengeTimeRemaining = challenge.seconds;
+        this.prepareChallengeCourse(challenge);
+        ui.challengeTimer.hidden = false;
+        ui.challengeTimerName.textContent = challenge.title.toUpperCase();
+        ui.challengeTimerGoal.textContent = challenge.description;
+        this.updateChallengeTimer();
+      } else {
+        ui.challengeTimer.hidden = true;
+      }
       this.state = "running";
       setOverlay(ui.menu, false);
       setOverlay(ui.result, false);
@@ -652,6 +678,43 @@
         "Ride started. Press up to move, left to lean back, right to lean forward, and down to lower the wheel.",
       );
       if (sounds.enabled) sounds.ensureContext();
+    }
+
+    prepareChallengeCourse(challenge) {
+      if (challenge.id === "catch-streak") {
+        this.pickups = [];
+        this.nextPickup = 300;
+        for (let index = 0; index < 22; index += 1) {
+          this.pickups.push({
+            x: 350 + index * 170,
+            minAngle: 0.3 + (index % 4) * 0.1,
+            checked: false,
+            collected: false,
+            phase: index,
+          });
+        }
+        this.nextPickup = 4300;
+      }
+
+      if (challenge.id === "wheelie-landings" || challenge.id === "tag-jumps") {
+        this.obstacles = [];
+        for (let index = 0; index < 5; index += 1) {
+          const rampX = 620 + index * 850;
+          this.obstacles.push({
+            x: rampX,
+            type: "ramp",
+            checked: false,
+            cleared: false,
+          });
+          this.obstacles.push({
+            x: rampX + 155,
+            type: "tag",
+            checked: false,
+            cleared: false,
+          });
+        }
+        this.nextObstacle = 5200;
+      }
     }
 
     pause() {
@@ -681,6 +744,7 @@
       ui.hud.hidden = true;
       ui.balancePanel.hidden = true;
       ui.boostPanel.hidden = true;
+      ui.challengeTimer.hidden = true;
       ui.controls.hidden = true;
       ui.pauseButton.hidden = true;
       refreshRecords();
@@ -712,6 +776,7 @@
       let hitPerfectBoost = false;
       if (
         challenge.id === "first-base" &&
+        this.challengeMode &&
         !save.dailyChallenge.completed &&
         distance >= 600 &&
         distance <= 700
@@ -736,6 +801,14 @@
       }
 
       this.runTime += dt;
+      if (this.challengeMode) {
+        this.challengeTimeRemaining = Math.max(0, this.challengeTimeRemaining - dt);
+        this.updateChallengeTimer();
+        if (this.challengeTimeRemaining <= 0) {
+          this.crash("challenge-time");
+          return;
+        }
+      }
       const distanceMeters = this.distanceMeters();
       const bikeLevel = getBikeIndex(save.selectedBike);
       const bikeSpeedBonus = bikeLevel * 5.5;
@@ -812,6 +885,7 @@
       const dailyChallenge = ensureDailyChallenge();
       if (
         dailyChallenge.id === "first-base" &&
+        this.challengeMode &&
         !save.dailyChallenge.completed &&
         !this.boostZonePrompted &&
         distanceMeters >= 600 &&
@@ -822,6 +896,7 @@
       }
       if (
         dailyChallenge.id === "first-base" &&
+        this.challengeMode &&
         !save.dailyChallenge.completed &&
         !this.dashResolved &&
         distanceMeters >= dailyChallenge.goal
@@ -1038,6 +1113,10 @@
           title: "Tagged out!",
           message: "Launch from the ramp and stay airborne over the catcher's tag.",
         },
+        "challenge-time": {
+          title: "Time's up!",
+          message: "Restart the daily challenge and try to beat the clock.",
+        },
       };
 
       const result = messages[reason] || messages.cone;
@@ -1051,6 +1130,7 @@
 
       ui.controls.hidden = true;
       ui.pauseButton.hidden = true;
+      ui.challengeTimer.hidden = true;
       window.setTimeout(() => setOverlay(ui.result, true), 420);
       this.announce(`${result.title} Final score ${finalScore}.`);
     }
@@ -1127,6 +1207,15 @@
       ui.balanceNeedle.style.left = `${normalizedAngle * 100}%`;
       ui.boostFill.style.transform = `scaleX(${this.boostCharge / 100})`;
       ui.boostButton.disabled = this.boostCharge < 34 || this.boostTimer > 0;
+    }
+
+    updateChallengeTimer() {
+      if (!this.challengeMode) return;
+      const seconds = Math.max(0, this.challengeTimeRemaining);
+      const minutes = Math.floor(seconds / 60);
+      const remainder = Math.ceil(seconds % 60);
+      ui.challengeTimerValue.textContent = `${minutes}:${String(remainder).padStart(2, "0")}`;
+      ui.challengeTimer.classList.toggle("is-urgent", seconds <= 10);
     }
 
     distanceMeters() {
@@ -1838,11 +1927,15 @@
         ? "Not completed yet"
         : `${progress} / ${challenge.goal} ${challenge.unit}`;
     ui.challengeProgress.classList.toggle("is-complete", save.dailyChallenge.completed);
+    ui.challengeAction.textContent = save.dailyChallenge.completed
+      ? "COME BACK TOMORROW"
+      : `PLAY NOW · ${challenge.seconds}s →`;
+    ui.challengeCard.classList.toggle("is-complete", save.dailyChallenge.completed);
   }
 
   function advanceDailyChallenge(challengeId) {
     const challenge = ensureDailyChallenge();
-    if (challenge.id !== challengeId || save.dailyChallenge.completed) return;
+    if (!game.challengeMode || challenge.id !== challengeId || save.dailyChallenge.completed) return;
     save.dailyChallenge.progress = Math.min(
       challenge.goal,
       (save.dailyChallenge.progress || 0) + 1,
@@ -1864,6 +1957,8 @@
     save.totalBaseballs += challenge.reward;
     writeSave();
     refreshRecords();
+    game.challengeMode = false;
+    ui.challengeTimer.hidden = true;
     sounds.inning();
     game.showToast(`DAILY COMPLETE! +⚾ ${challenge.reward}`);
     game.announce(`Daily challenge complete. You earned ${challenge.reward} baseballs.`);
@@ -2032,8 +2127,27 @@
   });
   if (!save.username) window.setTimeout(openUsernameDialog, 0);
 
+  function startDailyChallenge() {
+    const challenge = ensureDailyChallenge();
+    if (save.dailyChallenge.completed) {
+      game.showToast("Today's challenge is already complete!");
+      return;
+    }
+    game.start(true);
+    game.announce(`${challenge.title} started. You have ${challenge.seconds} seconds.`);
+  }
+
   ui.start.addEventListener("click", () => game.start());
-  ui.restart.addEventListener("click", () => game.start());
+  ui.restart.addEventListener("click", () =>
+    game.start(game.lastRunWasChallenge && !save.dailyChallenge.completed),
+  );
+  ui.challengeCard.addEventListener("click", startDailyChallenge);
+  ui.challengeCard.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      startDailyChallenge();
+    }
+  });
   ui.resume.addEventListener("click", () => game.resume());
   ui.home.addEventListener("click", () => game.home());
   ui.pauseHome.addEventListener("click", () => game.home());
