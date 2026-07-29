@@ -28,7 +28,8 @@ simple airtime physics, and a successful landing must touch down in a controlled
 
 The menu includes a challenge that rotates each local calendar day. Challenges include a
 timed first-base run with a perfect boost zone, controlled wheelie landings, jumping catcher
-tags, and baseball-catching streaks. Completing one awards spendable baseballs for new bikes.
+tags, and baseball-catching streaks. Select the challenge card to launch a dedicated course
+with an on-screen countdown timer. Completing one awards spendable baseballs for new bikes.
 The game stores scores, baseballs, purchased bikes, and sound preferences in the browser. It
 can also be installed to a phone's home screen from a supported mobile browser.
 
