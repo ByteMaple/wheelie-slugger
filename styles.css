@@ -144,6 +144,29 @@ a:focus-visible {
   white-space: nowrap;
 }
 
+.player-badge--owner {
+  max-width: min(58vw, 290px);
+  border-color: rgba(255, 196, 46, 0.65);
+  background: linear-gradient(135deg, rgba(255, 210, 75, 0.16), rgba(184, 121, 0, 0.1));
+}
+
+.owner-tag {
+  margin-left: 9px;
+  padding: 5px 8px;
+  border: 1px solid #ffe184;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #ffe889, #d99b09);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    0 0 16px rgba(255, 190, 31, 0.38);
+  color: #3b2200;
+  font-size: 14px;
+  font-weight: 1000;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
 .icon-button,
 .close-button {
   display: grid;
