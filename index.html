@@ -14,7 +14,7 @@
     <title>Wheelie Slugger</title>
     <link rel="manifest" href="./manifest.json" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="./styles.css?v=17" />
+    <link rel="stylesheet" href="./styles.css?v=18" />
   </head>
   <body>
     <div id="app">
@@ -121,8 +121,26 @@
               Wheelie Slugger.
             </p>
 
+            <fieldset class="difficulty-picker">
+              <legend>CHOOSE DIFFICULTY</legend>
+              <div>
+                <button type="button" data-difficulty="easy">
+                  <strong>Easy</strong>
+                  <small>Light gravity · no obstacles · fewer ⚾</small>
+                </button>
+                <button type="button" data-difficulty="normal" class="is-selected">
+                  <strong>Normal</strong>
+                  <small>Original balance · a few jump obstacles</small>
+                </button>
+                <button type="button" data-difficulty="hard">
+                  <strong>Hard</strong>
+                  <small>Strong gravity · many obstacles · more ⚾</small>
+                </button>
+              </div>
+            </fieldset>
+
             <button id="startButton" class="primary-button" type="button">
-              <span>Play ball</span>
+              <span>Play ball · Normal</span>
               <span aria-hidden="true">→</span>
             </button>
 
@@ -435,7 +453,7 @@
       </form>
     </dialog>
 
-    <script src="./config.js?v=17"></script>
-    <script src="./game.js?v=17"></script>
+    <script src="./config.js?v=18"></script>
+    <script src="./game.js?v=18"></script>
   </body>
 </html>
