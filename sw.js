@@ -1,5 +1,13 @@
-const CACHE_NAME = "wheelie-slugger-v3";
-const GAME_FILES = ["./", "./index.html", "./styles.css", "./game.js", "./manifest.json", "./icon.svg"];
+const CACHE_NAME = "wheelie-slugger-v4";
+const GAME_FILES = [
+  "./",
+  "./index.html",
+  "./styles.css",
+  "./config.js",
+  "./game.js",
+  "./manifest.json",
+  "./icon.svg",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(GAME_FILES)));
