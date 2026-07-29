@@ -87,6 +87,12 @@
           </div>
         </section>
 
+        <section id="challengeTimerPanel" class="challenge-timer" aria-label="Challenge timer" hidden>
+          <span id="challengeTimerName">DAILY CHALLENGE</span>
+          <strong id="challengeTimerValue">0:30</strong>
+          <small id="challengeTimerGoal"></small>
+        </section>
+
         <div id="inningBanner" class="inning-banner" aria-live="polite" hidden>
           <span id="inningBannerEyebrow">NEXT UP</span>
           <strong id="inningBannerTitle">INNING 2</strong>
@@ -122,7 +128,13 @@
               Garage
             </button>
 
-            <section class="daily-challenge" aria-labelledby="dailyChallengeTitle">
+            <section
+              id="dailyChallengeCard"
+              class="daily-challenge"
+              role="button"
+              tabindex="0"
+              aria-labelledby="dailyChallengeTitle"
+            >
               <div class="daily-challenge__top">
                 <div>
                   <span>DAILY CHALLENGE</span>
@@ -135,6 +147,7 @@
                 <i id="dailyChallengeFill"></i>
               </div>
               <small id="dailyChallengeProgress">0 / 1</small>
+              <span id="dailyChallengeAction" class="daily-challenge__action">PLAY CHALLENGE →</span>
             </section>
 
             <div class="menu-records">
