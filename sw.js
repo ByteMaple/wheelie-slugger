@@ -1,4 +1,4 @@
-const CACHE_NAME = "wheelie-slugger-v2";
+const CACHE_NAME = "wheelie-slugger-v3";
 const GAME_FILES = ["./", "./index.html", "./styles.css", "./game.js", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
