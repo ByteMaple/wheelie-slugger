@@ -25,6 +25,7 @@
     pause: $("#pauseOverlay"),
     controls: $("#gameControls"),
     start: $("#startButton"),
+    difficultyButtons: [...document.querySelectorAll("[data-difficulty]")],
     restart: $("#restartButton"),
     resume: $("#resumeButton"),
     home: $("#homeButton"),
@@ -365,6 +366,30 @@
     tag: { label: "Catcher tag", requiredAngle: 0, width: 68, height: 45, points: 275 },
   };
 
+  const difficulties = {
+    easy: {
+      label: "Easy",
+      gravity: 0.72,
+      baseballReward(catches) {
+        return catches % 2 === 0 ? 1 : 0;
+      },
+    },
+    normal: {
+      label: "Normal",
+      gravity: 1,
+      baseballReward() {
+        return 1;
+      },
+    },
+    hard: {
+      label: "Hard",
+      gravity: 1.34,
+      baseballReward() {
+        return 2;
+      },
+    },
+  };
+
   const dailyChallenges = [
     {
       id: "first-base",
@@ -431,6 +456,7 @@
       batterySaver: false,
       vibrationOn: true,
       screenShakeOn: true,
+      difficulty: "normal",
       longestWheelie: 0,
       username: null,
       playerId: null,
@@ -450,6 +476,7 @@
         : 0.7;
       saved.brightness = clamp(Number(saved.brightness) || 1, 0.45, 1.25);
       saved.longestWheelie = Math.max(0, Number(saved.longestWheelie) || 0);
+      if (!difficulties[saved.difficulty]) saved.difficulty = "normal";
       saved.ownedBikes = Array.isArray(stored.ownedBikes)
         ? [...new Set(["rookie", ...stored.ownedBikes])]
         : ["rookie"];
@@ -744,6 +771,7 @@
       this.speed = 0;
       this.score = 0;
       this.baseballs = 0;
+      this.catches = 0;
       this.combo = 1;
       this.bestCombo = 1;
       this.balanceTime = 0;
@@ -780,7 +808,9 @@
 
     seedWorld() {
       while (this.nextPickup < this.width * 2.2) this.spawnPickup();
-      while (this.nextObstacle < this.width * 2.2) this.spawnObstacle();
+      if (save.difficulty !== "easy") {
+        while (this.nextObstacle < this.width * 2.2) this.spawnObstacle();
+      }
     }
 
     start(challengeMode = false) {
@@ -813,7 +843,7 @@
       ui.pauseButton.hidden = false;
       this.lastTime = performance.now();
       this.announce(
-        "Ride started. Press up to move, left to lean back, right to lean forward, and down to lower the wheel.",
+        `${difficulties[save.difficulty].label} ride started. Press up to jump, left to lean back, right to lean forward, and down to lower the wheel.`,
       );
       if (sounds.enabled) sounds.ensureContext();
     }
@@ -973,6 +1003,7 @@
         }
       }
       const distanceMeters = this.distanceMeters();
+      const difficulty = difficulties[save.difficulty];
       const bikeLevel = getBikeIndex(save.selectedBike);
       const bikeSpeedBonus = bikeLevel * 5.5;
       const bikeAcceleration = 2.35 + bikeLevel * 0.035;
@@ -998,7 +1029,7 @@
       if (this.boostTimer > 0) this.boostTimer -= dt;
       this.boostCharge = Math.min(100, this.boostCharge + dt * (this.boostTimer > 0 ? 3 : 9));
 
-      let torque = -0.62 - this.angle * 0.25;
+      let torque = (-0.62 - this.angle * 0.25) * difficulty.gravity;
       if (this.controls.leanBack) torque += 4.35;
       if (this.controls.leanForward) torque -= 3.45;
       if (this.controls.wheelDown) torque -= 4.8;
@@ -1015,7 +1046,7 @@
 
       if (this.airborne) {
         this.airHeight += this.airVelocity * dt;
-        this.airVelocity -= 610 * dt;
+        this.airVelocity -= 610 * difficulty.gravity * dt;
         if (this.airHeight <= 0 && this.airVelocity < 0) {
           this.airHeight = 0;
           this.airVelocity = 0;
@@ -1111,7 +1142,9 @@
     fillWorld() {
       const ahead = this.camera + this.width * 2;
       while (this.nextPickup < ahead) this.spawnPickup();
-      while (this.nextObstacle < ahead) this.spawnObstacle();
+      if (save.difficulty !== "easy") {
+        while (this.nextObstacle < ahead) this.spawnObstacle();
+      }
     }
 
     spawnPickup() {
@@ -1129,7 +1162,10 @@
 
     spawnObstacle() {
       const inning = innings[(this.currentInning - 1) % innings.length];
-      const available = inning.obstacles;
+      const available =
+        save.difficulty === "hard"
+          ? ["tag", "tire-stack", "tag", "bats", "ramp", "tag", "mound"]
+          : [...inning.obstacles, "tag"];
       const type = available[Math.floor(Math.random() * available.length)];
       this.obstacles.push({
         x: this.nextObstacle,
@@ -1145,8 +1181,12 @@
           cleared: false,
         });
       }
-      const spacing = Math.max(470, 780 - this.currentInning * 28);
-      this.nextObstacle += spacing + Math.random() * 390;
+      const spacing =
+        save.difficulty === "hard"
+          ? Math.max(285, 410 - this.currentInning * 12)
+          : Math.max(620, 980 - this.currentInning * 24);
+      const randomSpacing = save.difficulty === "hard" ? 155 : 420;
+      this.nextObstacle += spacing + Math.random() * randomSpacing;
     }
 
     checkObjects() {
@@ -1159,9 +1199,11 @@
         pickup.checked = true;
         if (this.angle >= pickup.minAngle - 0.16 && this.angle <= 1.3) {
           pickup.collected = true;
-          this.baseballs += 1;
-          save.totalBaseballs += 1;
-          save.baseballBalance += 1;
+          this.catches += 1;
+          const reward = difficulties[save.difficulty].baseballReward(this.catches);
+          this.baseballs += reward;
+          save.totalBaseballs += reward;
+          save.baseballBalance += reward;
           writeSave();
           this.score += 120 * this.combo;
           sounds.collect();
@@ -1173,8 +1215,9 @@
             9,
             false,
           );
-          this.showToast(this.baseballs % 5 === 0 ? "Run scored! +500" : `Catch! ×${this.combo}`);
-          if (this.baseballs % 5 === 0) {
+          const rewardText = reward ? ` +⚾ ${reward}` : " · practice catch";
+          this.showToast(this.catches % 5 === 0 ? "Run scored! +500" : `Catch!${rewardText}`);
+          if (this.catches % 5 === 0) {
             this.score += 500;
             sounds.inning();
           }
@@ -1215,6 +1258,15 @@
           this.showToast("AIR! LAND IN A WHEELIE");
           this.announce("Jump! Use left and right to land in a wheelie.");
           continue;
+        }
+
+        const mustJump =
+          save.difficulty === "hard" ||
+          (save.difficulty === "normal" &&
+            (obstacle.type === "tire-stack" || obstacle.type === "bats"));
+        if (mustJump && !this.airborne) {
+          this.crash(obstacle.type);
+          return;
         }
 
         if (this.airborne) {
@@ -2094,6 +2146,16 @@
     renderGarage();
   }
 
+  function refreshDifficultyPicker() {
+    const selected = difficulties[save.difficulty] || difficulties.normal;
+    ui.difficultyButtons.forEach((button) => {
+      const isSelected = button.dataset.difficulty === save.difficulty;
+      button.classList.toggle("is-selected", isSelected);
+      button.setAttribute("aria-pressed", String(isSelected));
+    });
+    ui.start.querySelector("span").textContent = `Play ball · ${selected.label}`;
+  }
+
   function renderDailyChallenge() {
     const challenge = ensureDailyChallenge();
     const progress = save.dailyChallenge.completed
@@ -2306,6 +2368,7 @@
   let resumeAfterSettings = false;
 
   refreshPlayerIdentity();
+  refreshDifficultyPicker();
   ui.usernameForm.addEventListener("submit", claimUsername);
   ui.usernameDialog.addEventListener("cancel", (event) => {
     if (!save.username) event.preventDefault();
@@ -2323,6 +2386,13 @@
   }
 
   ui.start.addEventListener("click", () => game.start());
+  ui.difficultyButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      save.difficulty = button.dataset.difficulty;
+      writeSave();
+      refreshDifficultyPicker();
+    });
+  });
   ui.restart.addEventListener("click", () =>
     game.start(game.lastRunWasChallenge && !save.dailyChallenge.completed),
   );
