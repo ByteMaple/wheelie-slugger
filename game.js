@@ -409,11 +409,50 @@
       oscillator.stop(now + duration);
     }
 
-    collect() {
-      this.tone(620, 0.08, "sine", 0.05, 880);
+    noiseBurst(duration, volume, frequency, type = "bandpass") {
+      const audio = this.ensureContext();
+      if (!audio) return;
+
+      const frameCount = Math.max(1, Math.floor(audio.sampleRate * duration));
+      const buffer = audio.createBuffer(1, frameCount, audio.sampleRate);
+      const samples = buffer.getChannelData(0);
+      for (let index = 0; index < frameCount; index += 1) {
+        const fade = 1 - index / frameCount;
+        samples[index] = (Math.random() * 2 - 1) * fade * fade;
+      }
+
+      const source = audio.createBufferSource();
+      const filter = audio.createBiquadFilter();
+      const gain = audio.createGain();
+      const now = audio.currentTime;
+      source.buffer = buffer;
+      filter.type = type;
+      filter.frequency.setValueAtTime(frequency, now);
+      filter.Q.setValueAtTime(type === "bandpass" ? 1.8 : 0.7, now);
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(audio.destination);
+      source.start(now);
     }
 
-    clear() {
+    collect() {
+      // A low leather thump and short slap recreate a baseball landing in a glove.
+      this.tone(155, 0.11, "sine", 0.11, 82);
+      this.noiseBurst(0.075, 0.16, 1150, "bandpass");
+      window.setTimeout(() => this.tone(235, 0.055, "triangle", 0.055, 145), 18);
+    }
+
+    clear(type) {
+      if (type === "bats") {
+        // Bright wooden impact followed by the quick snap of a clean hit.
+        this.noiseBurst(0.055, 0.24, 3100, "highpass");
+        this.tone(185, 0.075, "square", 0.105, 92);
+        this.tone(1320, 0.045, "triangle", 0.085, 570);
+        window.setTimeout(() => this.noiseBurst(0.09, 0.08, 1750, "bandpass"), 28);
+        return;
+      }
       this.tone(240, 0.1, "square", 0.025, 410);
     }
 
@@ -738,7 +777,7 @@
 
         obstacle.cleared = true;
         this.score += data.points * this.combo;
-        sounds.clear();
+        sounds.clear(obstacle.type);
         this.burst(obstacle.x - this.camera, this.groundY() - data.height / 2, "#c7ff45", 7);
         this.showToast(`${data.label} cleared! +${data.points * this.combo}`);
       }
