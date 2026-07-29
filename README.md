@@ -14,6 +14,7 @@ A mobile-friendly browser game that combines e-bike wheelies with a baseball the
 - Hold **S** or **Down Arrow** to bring the front wheel down.
 - Press **X**, **Shift**, or the on-screen **Boost** button when boost is charged.
 - Clear cones, gloves, and bats while collecting baseballs and building a score multiplier.
+- Launch from MTB hoppers, adjust the bike in the air, and land inside the wheelie balance zone.
 
 On mobile, the four matching arrow controls appear at the bottom of the game screen.
 
@@ -22,6 +23,8 @@ collected during rides become spendable in-game currency for purchasing 25 diffe
 Each more expensive bike has a higher top speed and quicker acceleration. The bikes use an
 electric dirt-bike design with off-road tires, battery bodies, long suspension, and motocross
 bodywork.
+Later innings add pitcher's mounds, tire stacks, and MTB-style hopper ramps. Ramp jumps use
+simple airtime physics, and a successful landing must touch down in a controlled wheelie.
 The game stores scores, baseballs, purchased bikes, and sound preferences in the browser. It
 can also be installed to a phone's home screen from a supported mobile browser.
 
