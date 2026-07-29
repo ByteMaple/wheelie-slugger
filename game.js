@@ -39,6 +39,11 @@
     bikeList: $("#bikeList"),
     menuBest: $("#menuBestScore"),
     menuBaseballs: $("#menuBaseballs"),
+    challengeTitle: $("#dailyChallengeTitle"),
+    challengeDescription: $("#dailyChallengeDescription"),
+    challengeReward: $("#dailyChallengeReward"),
+    challengeFill: $("#dailyChallengeFill"),
+    challengeProgress: $("#dailyChallengeProgress"),
     garageBaseballs: $("#garageBaseballs"),
     resultScore: $("#resultScore"),
     resultDistance: $("#resultDistance"),
@@ -334,7 +339,56 @@
       points: 240,
     },
     ramp: { label: "MTB hopper", requiredAngle: 0.2, width: 112, height: 58, points: 350 },
+    tag: { label: "Catcher tag", requiredAngle: 0, width: 68, height: 45, points: 275 },
   };
+
+  const dailyChallenges = [
+    {
+      id: "first-base",
+      title: "First Base Dash",
+      description: "Reach first base at 750 m in 30 seconds. Boost in the gold zone at 600–700 m.",
+      goal: 750,
+      reward: 450,
+      unit: "m",
+    },
+    {
+      id: "wheelie-landings",
+      title: "Wheelie Landing",
+      description: "Land 3 MTB ramp jumps in the green wheelie zone.",
+      goal: 3,
+      reward: 550,
+      unit: "landings",
+    },
+    {
+      id: "tag-jumps",
+      title: "Beat the Tag",
+      description: "Jump over 3 catcher tags without crashing.",
+      goal: 3,
+      reward: 600,
+      unit: "tags",
+    },
+    {
+      id: "catch-streak",
+      title: "Golden Glove",
+      description: "Catch 15 baseballs during your rides.",
+      goal: 15,
+      reward: 400,
+      unit: "catches",
+    },
+  ];
+
+  function localDateKey() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  }
+
+  function challengeForDate(dateKey) {
+    const seed = [...dateKey].reduce((total, character) => total + character.charCodeAt(0), 0);
+    return dailyChallenges[seed % dailyChallenges.length];
+  }
 
   function readSave() {
     const fallback = {
@@ -347,6 +401,7 @@
       username: null,
       playerId: null,
       playerToken: null,
+      dailyChallenge: null,
     };
 
     try {
@@ -373,6 +428,21 @@
   }
 
   const save = readSave();
+
+  function ensureDailyChallenge() {
+    const date = localDateKey();
+    const definition = challengeForDate(date);
+    if (!save.dailyChallenge || save.dailyChallenge.date !== date) {
+      save.dailyChallenge = {
+        date,
+        id: definition.id,
+        progress: 0,
+        completed: false,
+      };
+      writeSave();
+    }
+    return dailyChallenges.find((challenge) => challenge.id === save.dailyChallenge.id) || definition;
+  }
 
   function writeSave() {
     try {
@@ -537,6 +607,10 @@
       this.airHeight = 0;
       this.airVelocity = 0;
       this.activeJump = null;
+      this.runTime = 0;
+      this.perfectBoost = false;
+      this.boostZonePrompted = false;
+      this.dashResolved = false;
       this.currentInning = 1;
       this.nextObstacle = 780;
       this.nextPickup = 470;
@@ -633,11 +707,25 @@
 
     useBoost() {
       if (this.state !== "running" || this.boostCharge < 34 || this.boostTimer > 0) return;
+      const challenge = ensureDailyChallenge();
+      const distance = this.distanceMeters();
+      let hitPerfectBoost = false;
+      if (
+        challenge.id === "first-base" &&
+        !save.dailyChallenge.completed &&
+        distance >= 600 &&
+        distance <= 700
+      ) {
+        this.perfectBoost = true;
+        hitPerfectBoost = true;
+        this.showToast("PERFECT BOOST!");
+        sounds.inning();
+      }
       this.boostCharge -= 34;
       this.boostTimer = 0.9;
       sounds.boost();
       this.burst(this.playerX() - 40, this.groundY() - 20, "#ffb33c", 13, true);
-      this.showToast("Power boost!");
+      if (!hitPerfectBoost) this.showToast("Power boost!");
       if (navigator.vibrate) navigator.vibrate(20);
     }
 
@@ -647,6 +735,7 @@
         return;
       }
 
+      this.runTime += dt;
       const distanceMeters = this.distanceMeters();
       const bikeLevel = getBikeIndex(save.selectedBike);
       const bikeSpeedBonus = bikeLevel * 5.5;
@@ -701,6 +790,7 @@
           this.burst(this.playerX() + 25, this.groundY() - 10, "#c7ff45", 15, true);
           sounds.clear("landing");
           this.showToast(`WHEELIE LANDING! +${jumpPoints}`);
+          advanceDailyChallenge("wheelie-landings");
           this.activeJump = null;
           if (navigator.vibrate) navigator.vibrate(25);
         }
@@ -718,6 +808,33 @@
       }
 
       this.score += dt * this.speed * 0.045;
+
+      const dailyChallenge = ensureDailyChallenge();
+      if (
+        dailyChallenge.id === "first-base" &&
+        !save.dailyChallenge.completed &&
+        !this.boostZonePrompted &&
+        distanceMeters >= 600 &&
+        distanceMeters <= 700
+      ) {
+        this.boostZonePrompted = true;
+        this.showToast("GOLD ZONE—BOOST NOW!");
+      }
+      if (
+        dailyChallenge.id === "first-base" &&
+        !save.dailyChallenge.completed &&
+        !this.dashResolved &&
+        distanceMeters >= dailyChallenge.goal
+      ) {
+        this.dashResolved = true;
+        if (this.runTime <= 30 && this.perfectBoost) {
+          completeDailyChallenge();
+        } else {
+          this.showToast(
+            this.runTime > 30 ? "SAFE—but too slow. Try again!" : "Boost in the gold zone!",
+          );
+        }
+      }
 
       if (this.angle > 1.43) {
         this.crash("loopout");
@@ -767,6 +884,14 @@
         checked: false,
         cleared: false,
       });
+      if (type === "ramp") {
+        this.obstacles.push({
+          x: this.nextObstacle + 155,
+          type: "tag",
+          checked: false,
+          cleared: false,
+        });
+      }
       const spacing = Math.max(470, 780 - this.currentInning * 28);
       this.nextObstacle += spacing + Math.random() * 390;
     }
@@ -787,6 +912,7 @@
           writeSave();
           this.score += 120 * this.combo;
           sounds.collect();
+          advanceDailyChallenge("catch-streak");
           this.burst(
             pickup.x - this.camera,
             this.pickupY(pickup),
@@ -806,6 +932,20 @@
         if (obstacle.checked || checkX < obstacle.x) continue;
         obstacle.checked = true;
         const data = obstacleTypes[obstacle.type];
+
+        if (obstacle.type === "tag") {
+          if (!this.airborne) {
+            this.crash("tag");
+            return;
+          }
+          obstacle.cleared = true;
+          this.score += data.points * this.combo;
+          sounds.collect();
+          this.burst(obstacle.x - this.camera, this.groundY() - 26, "#ffbf2f", 12, true);
+          this.showToast(`TAG JUMP! +${data.points * this.combo}`);
+          advanceDailyChallenge("tag-jumps");
+          continue;
+        }
 
         if (obstacle.type === "ramp") {
           if (this.airborne || this.speed < 115 || this.angle < data.requiredAngle) {
@@ -893,6 +1033,10 @@
         landing: {
           title: "Hard landing!",
           message: "Use left and right in the air, then land inside the green wheelie zone.",
+        },
+        tag: {
+          title: "Tagged out!",
+          message: "Launch from the ramp and stay airborne over the catcher's tag.",
         },
       };
 
@@ -1359,11 +1503,32 @@
         ctx.moveTo(-56, -3);
         ctx.lineTo(53, -61);
         ctx.stroke();
-        ctx.fillStyle = "#172532";
-        ctx.font = "900 10px system-ui, sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("HOPPER", 12, -23);
-        ctx.textAlign = "start";
+      } else if (type === "tag") {
+        ctx.fillStyle = "rgba(0,0,0,.2)";
+        ctx.beginPath();
+        ctx.ellipse(0, 4, 39, 9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#f7f4e8";
+        ctx.beginPath();
+        ctx.moveTo(-30, -2);
+        ctx.lineTo(0, -31);
+        ctx.lineTo(30, -2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = "#d5d0c3";
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        ctx.save();
+        ctx.translate(8, -25);
+        ctx.rotate(-0.35);
+        ctx.fillStyle = "#a95d2b";
+        roundRect(ctx, -20, -21, 40, 28, 11);
+        ctx.fill();
+        for (let finger = 0; finger < 4; finger += 1) {
+          roundRect(ctx, -17 + finger * 9, -29 - (finger % 2) * 2, 8, 16, 5);
+          ctx.fill();
+        }
+        ctx.restore();
       }
 
       ctx.restore();
@@ -1654,7 +1819,54 @@
     ui.menuBest.textContent = formatNumber(save.bestScore);
     ui.menuBaseballs.textContent = formatNumber(save.totalBaseballs);
     ui.garageBaseballs.textContent = formatNumber(save.baseballBalance);
+    renderDailyChallenge();
     renderGarage();
+  }
+
+  function renderDailyChallenge() {
+    const challenge = ensureDailyChallenge();
+    const progress = save.dailyChallenge.completed
+      ? challenge.goal
+      : Math.min(challenge.goal, save.dailyChallenge.progress || 0);
+    ui.challengeTitle.textContent = challenge.title;
+    ui.challengeDescription.textContent = challenge.description;
+    ui.challengeReward.textContent = formatNumber(challenge.reward);
+    ui.challengeFill.style.width = `${(progress / challenge.goal) * 100}%`;
+    ui.challengeProgress.textContent = save.dailyChallenge.completed
+      ? "COMPLETED · REWARD CLAIMED"
+      : challenge.id === "first-base"
+        ? "Not completed yet"
+        : `${progress} / ${challenge.goal} ${challenge.unit}`;
+    ui.challengeProgress.classList.toggle("is-complete", save.dailyChallenge.completed);
+  }
+
+  function advanceDailyChallenge(challengeId) {
+    const challenge = ensureDailyChallenge();
+    if (challenge.id !== challengeId || save.dailyChallenge.completed) return;
+    save.dailyChallenge.progress = Math.min(
+      challenge.goal,
+      (save.dailyChallenge.progress || 0) + 1,
+    );
+    if (save.dailyChallenge.progress >= challenge.goal) {
+      completeDailyChallenge();
+    } else {
+      writeSave();
+      renderDailyChallenge();
+    }
+  }
+
+  function completeDailyChallenge() {
+    const challenge = ensureDailyChallenge();
+    if (save.dailyChallenge.completed) return;
+    save.dailyChallenge.completed = true;
+    save.dailyChallenge.progress = challenge.goal;
+    save.baseballBalance += challenge.reward;
+    save.totalBaseballs += challenge.reward;
+    writeSave();
+    refreshRecords();
+    sounds.inning();
+    game.showToast(`DAILY COMPLETE! +⚾ ${challenge.reward}`);
+    game.announce(`Daily challenge complete. You earned ${challenge.reward} baseballs.`);
   }
 
   function refreshPlayerIdentity() {
