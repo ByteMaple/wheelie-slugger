@@ -1,4 +1,4 @@
-const CACHE_NAME = "wheelie-slugger-v1";
+const CACHE_NAME = "wheelie-slugger-v2";
 const GAME_FILES = ["./", "./index.html", "./styles.css", "./game.js", "./manifest.json", "./icon.svg"];
 
 self.addEventListener("install", (event) => {
@@ -20,14 +20,14 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
   event.respondWith(
-    caches.match(event.request).then(
-      (cached) =>
-        cached ||
-        fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
+        if (response.ok) {
           const copy = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
-          return response;
-        }),
-    ),
+        }
+        return response;
+      })
+      .catch(() => caches.match(event.request)),
   );
 });
